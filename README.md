@@ -28,28 +28,36 @@ If a step fails, setup offers to open pi to diagnose and fix it. pi clears whate
 
 ## Add or remove a skill
 
-Skills are listed in [apm.yml](apm.yml), one line each:
+**Skills from other repos** go in the `packages` list in [pi-settings.json](pi-settings.json), one entry each:
 
-```yaml
-dependencies:
-  apm:
-    - your-org/agent-skills/skills/code-review#v1.0.0   # one skill, pinned to a tag
-    - your-org/more-skills                               # every skill in a repo
-    - ./skills/my-skill                                  # a skill written in this repo
+```json
+"packages": [
+  "git:github.com/your-org/agent-skills@v1.2.0",
+  { "source": "git:github.com/anthropics/skills@8a1541c", "skills": ["skills/pdf", "skills/docx"] }
+]
 ```
 
-- **Add:** add a line. Alternatively, run `apm install <link>` in this folder, which adds the line for you.
-- **Remove:** delete the line.
+- **A plain string** installs every skill in that repo.
+- **An object with `"skills"`** installs only the skill folders you name.
 
-Then run `./setup.sh`, and commit `apm.yml` together with `apm.lock.yaml`.
+**Skills written in this repo** are folders in [skills/](skills/). Drop a folder in or delete it; no list to edit.
+
+Then run `./setup.sh`.
+
+The rules:
+
+- **Pin every link** to a tag or commit (`@v1.2.0`, `@8a1541c`). `setup.sh` refuses unpinned links, so every machine gets the same version.
+- **Repo layout:** pi finds a repo's skills in its `skills/` folder, or wherever the repo's `package.json` points with `"pi": {"skills": [...]}`.
+- **Removing:** deleting an entry removes it everywhere. Packages a developer added themselves aren't touched.
+- **Format:** entries use pi's own package format, so they can also bring pi extensions and prompt templates.
 
 ## Keep up to date
 
 | What happened | Run |
 |---|---|
 | Someone pushed changes to this repo | `git pull && ./setup.sh` |
-| You edited `apm.yml`, `mise.toml` or `pi-settings.json` | `./setup.sh` |
-| You want the newest versions of the skills | `./setup.sh --update`, then commit `apm.lock.yaml` |
+| You edited `pi-settings.json`, `mise.toml` or `skills/` | `./setup.sh` |
+| A skill repo has a new release | Change its `@tag` in `pi-settings.json`, then run `./setup.sh` |
 | You want a newer tool | Change its version in `mise.toml`, then run `./setup.sh` (`mise outdated --bump` lists newer versions) |
 
 `setup.sh` is always safe to re-run. Don't use `herdr update` or `pi update self`; versions come from this repo.
@@ -58,10 +66,9 @@ Then run `./setup.sh`, and commit `apm.yml` together with `apm.lock.yaml`.
 
 | File | Controls |
 |---|---|
-| `setup.sh` | Installs or updates everything |
+| `setup.sh` | Installs or updates everything. It has no lists of its own. |
 | `mise.toml` | Tools and their versions |
-| `apm.yml` | Skills |
-| `pi-settings.json` | pi defaults. These keys are reset on every run; your other pi settings aren't touched. |
+| `pi-settings.json` | pi defaults and skill packages. These keys are reset on every run; your other pi settings aren't touched. |
 | `skills/` | Skills written in this repo |
 | `scripts/test.sh` | For maintainers: runs `setup.sh` on a pretend new machine and checks the result |
 
@@ -91,5 +98,5 @@ Then run `./setup.sh`, and commit `apm.yml` together with `apm.lock.yaml`.
 ## Why these tools
 
 - **mise** installs every tool from one file, on macOS and Linux, without admin rights.
-- **APM** (Microsoft's Agent Package Manager) installs skills from links. Its lockfile keeps every machine on the same skill versions, and it removes a skill when its line is deleted.
+- **pi's own packages** for skills. We tried Microsoft's APM; it works, but pi can install skills from git by itself, so that's one tool less. Pinned links keep every machine on the same versions.
 - **Copilot `/login`** rather than a token: pi sends a token from the environment straight to Copilot, which rejected every request in our test.

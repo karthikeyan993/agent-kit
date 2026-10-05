@@ -5,7 +5,6 @@
 [tools]
 herdr = "0.9.3"                        # keep the same on laptops and VMs
 "github:earendil-works/pi" = "1.0.2"
-apm = "0.33.0"                         # installs the skills in apm.yml
 
 # Needed by pi, the skills and setup.sh
 node = "24.21.0"

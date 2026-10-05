@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Install or update everything on this machine: tools, skills, pi defaults.
 #
-#   ./setup.sh            apply this repo to this machine (safe to re-run)
-#   ./setup.sh --update   also move skills to the newest versions their links
-#                         allow (rewrites apm.lock.yaml; commit it afterwards)
+#   ./setup.sh      apply this repo to this machine (safe to re-run)
 #
+# What gets installed is declared in mise.toml (tools), pi-settings.json
+# (pi defaults and skill packages) and skills/ (skills written here).
 # If a step fails, it offers to open pi to diagnose and fix it.
 set -Eeuo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -56,11 +56,9 @@ on_failure() {
 }
 trap on_failure ERR
 
-update=""
 case "${1:-}" in
   "") ;;
-  --update) update=1 ;;
-  -h | --help) sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  -h | --help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   *) die "Unknown option: $1 (see ./setup.sh --help)" ;;
 esac
 
@@ -117,6 +115,9 @@ if ! gh auth status >/dev/null 2>&1; then
     warn "Not logged in to GitHub; private skills will fail. Fix: gh auth login, then ./setup.sh"
   fi
 fi
+if gh auth status >/dev/null 2>&1; then
+  gh auth setup-git # lets git (and so pi) clone private repos with this login
+fi
 if ! pi auth check --provider github-copilot >/dev/null 2>&1 && interactive; then
   say "Logging in to GitHub Copilot"
   echo "    pi opens next: type /login, choose GitHub Copilot (leave the Enterprise"
@@ -126,35 +127,42 @@ if ! pi auth check --provider github-copilot >/dev/null 2>&1 && interactive; the
   (cd "$HOME" && pi --no-session) || true
 fi
 
-# 4. Skills from apm.yml, into .agents/skills/. Deleted lines are removed.
-say "Installing skills"
-if [ -n "$update" ]; then
-  apm update --yes
+# 4. pi settings and skills, all declared in pi-settings.json and skills/:
+#    - every key in pi-settings.json is set to the team value; your other
+#      pi settings are left alone
+#    - its "packages" replace the ones an earlier run added (marked
+#      "agentKit": true); packages you added yourself stay
+#    - skills/ in this repo is added to pi's skill folders
+say "Applying pi settings"
+unpinned="$(jq -r '.packages // [] | .[] | if type == "string" then . else .source end
+  | select(test("^[./~]") | not) | select(test("@[^@/:]+$") | not)' pi-settings.json)"
+if [ -n "$unpinned" ]; then
+  die "pi-settings.json: pin each package to a tag or commit (like git:github.com/org/repo@v1.2.0) so every machine gets the same version. Not pinned: $unpinned"
 fi
-apm install
-apm prune
-
-# 5. pi defaults from pi-settings.json. Those keys are set to the team value;
-#    every other pi setting is left alone. Also points pi at the skills.
 settings="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/settings.json"
 mkdir -p "$(dirname "$settings")"
 if [ ! -f "$settings" ]; then echo '{}' >"$settings"; fi
-jq --slurpfile team pi-settings.json --arg skills "$KIT_DIR/.agents/skills" \
-  '. * $team[0] | .skills = ((.skills // []) - [$skills] + [$skills])' \
+jq --slurpfile team pi-settings.json --arg skills "$KIT_DIR/skills" '
+  ($team[0].packages // [] | map((if type == "string" then {source: .} else . end) + {agentKit: true})) as $packages
+  | . * ($team[0] | del(.packages))
+  | .packages = ([(.packages // [])[] | select(type == "object" and .agentKit == true | not)] + $packages)
+  | .skills = ((.skills // []) - [$skills] + [$skills])' \
   "$settings" >"$settings.tmp"
 mv "$settings.tmp" "$settings"
+
+# 5. Download the skill packages now, so a bad link fails here, not in pi.
+say "Installing skill packages"
+GIT_TERMINAL_PROMPT=0 pi update --extensions </dev/null
 
 # 6. herdr integration: herdr shows each pi pane's state and restores sessions.
 herdr integration install pi
 
 # Summary
 rm -f .setup-failure.md
-skills=0
-if [ -d .agents/skills ]; then
-  skills="$(find .agents/skills -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
-fi
 echo
-say "Done: herdr $(herdr --version | awk '{print $2}'), pi $(pi --version), skills installed: $skills"
+say "Done: herdr $(herdr --version | awk '{print $2}'), pi $(pi --version)," \
+  "skill packages: $(jq '.packages // [] | length' pi-settings.json)," \
+  "skills in skills/: $(find skills -name SKILL.md | wc -l | tr -d ' ')"
 if pi auth check --provider github-copilot >/dev/null 2>&1; then
   echo "    GitHub Copilot: logged in."
 else

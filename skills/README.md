@@ -1,6 +1,11 @@
 # Skills written in this repo
 
-For skills that don't live anywhere else. Each skill is a folder with a `SKILL.md`:
+Every folder here that contains a `SKILL.md` is a skill everyone gets.
+
+- **Add:** create the folder.
+- **Remove:** delete the folder.
+
+Nothing else needs changing. Each developer gets the change after `git pull` + `./setup.sh`.
 
 ```
 skills/code-review/SKILL.md
@@ -17,4 +22,4 @@ Steps the agent should follow…
 
 The `description` says what the skill does and when to use it. The agent decides whether to load a skill from that line alone.
 
-To ship it, add `- ./skills/code-review` to [apm.yml](../apm.yml) and run `./setup.sh`.
+For skills that live in other repos, use the `packages` list in [pi-settings.json](../pi-settings.json) instead.

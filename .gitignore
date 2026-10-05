@@ -1,6 +1,4 @@
-# Written by setup.sh and apm
-.agents/
-apm_modules/
+# Written by setup.sh when a step fails
 .setup-failure.md
 
 .DS_Store

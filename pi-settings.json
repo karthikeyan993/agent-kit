@@ -3,5 +3,6 @@
   "defaultModel": "gpt-6-luna",
   "modelThinkingLevels": {
     "github-copilot/gpt-6-luna": "xhigh"
-  }
+  },
+  "packages": []
 }
