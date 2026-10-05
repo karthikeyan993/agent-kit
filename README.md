@@ -28,27 +28,56 @@ If a step fails, setup offers to open pi to diagnose and fix it. pi clears whate
 
 ## Add or remove a skill
 
-**Skills from other repos** go in the `packages` list in [pi-settings.json](pi-settings.json), one entry each:
+Skills from other repos go in the `packages` list in [pi-settings.json](pi-settings.json). Skills written in this repo are just folders in [skills/](skills/).
+
+### Example: add Matt Pocock's grill-me
+
+**1. Find the skill on GitHub.** It's at
+[github.com/mattpocock/skills/…/skills/productivity/grill-me](https://github.com/mattpocock/skills/tree/v1.3.1/skills/productivity/grill-me).
+That link has everything you need:
+
+```
+https://github.com/mattpocock/skills/tree/v1.3.1/skills/productivity/grill-me
+                   └──── repo ─────┘      └tag─┘ └────── skill folder ──────┘
+```
+
+**2. Check its `SKILL.md` for other skills it uses.** grill-me's instructions say to use the `grilling` skill, so you need that one too.
+
+**3. Add one entry to `packages`:**
 
 ```json
 "packages": [
-  "git:github.com/your-org/agent-skills@v1.2.0",
-  { "source": "git:github.com/anthropics/skills@8a1541c", "skills": ["skills/pdf", "skills/docx"] }
+  {
+    "source": "git:github.com/mattpocock/skills@v1.3.1",
+    "skills": [
+      "skills/productivity/grill-me",
+      "skills/productivity/grilling"
+    ]
+  }
 ]
 ```
 
-- **A plain string** installs every skill in that repo.
-- **An object with `"skills"`** installs only the skill folders you name.
+**4. Run `./setup.sh`, then commit** so the team gets it on their next `git pull && ./setup.sh`.
 
-**Skills written in this repo** are folders in [skills/](skills/). Drop a folder in or delete it; no list to edit.
+**5. Use it.** In pi, type `/skill:grill-me`.
+
+### Other cases
+
+| You want to | Do this |
+|---|---|
+| Add some skills from a repo | `{ "source": "git:github.com/OWNER/REPO@TAG", "skills": ["path/to/skill", …] }` |
+| Add every skill in a repo | `"git:github.com/OWNER/REPO@TAG"` (just the string) |
+| Move to a newer version | Change the `@TAG` |
+| Remove a skill | Delete its path from `"skills"`, or delete the whole entry |
+| Add a skill written here | Create `skills/<name>/SKILL.md` (see [skills/README.md](skills/README.md)) |
 
 Then run `./setup.sh`.
 
-The rules:
+### Rules
 
-- **Pin every link** to a tag or commit (`@v1.2.0`, `@8a1541c`). `setup.sh` refuses unpinned links, so every machine gets the same version.
-- **Repo layout:** pi finds a repo's skills in its `skills/` folder, or wherever the repo's `package.json` points with `"pi": {"skills": [...]}`.
-- **Removing:** deleting an entry removes it everywhere. Packages a developer added themselves aren't touched.
+- **Always pin** to a tag (`@v1.3.1`) or a full commit SHA. `setup.sh` refuses links without one, so every machine gets the same version.
+- **Repo layout:** pi finds a repo's skills in its `skills/` folder, or wherever the repo's `package.json` points with `"pi": {"skills": [...]}`. Matt's and Anthropic's skill repos both use `skills/`.
+- **Removing:** removing an entry removes those skills from every machine. Packages a developer installed themselves aren't touched.
 - **Format:** entries use pi's own package format, so they can also bring pi extensions and prompt templates.
 
 ## Keep up to date
