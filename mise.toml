@@ -1,0 +1,16 @@
+# Team agent toolchain. Versions are pinned: bump them in a PR so everyone
+# (laptops and remote devboxes) moves together. herdr client and server must
+# speak the same protocol, so keep one herdr version across all machines.
+#
+# bootstrap.sh links this file into ~/.config/mise/conf.d/, which makes these
+# tools global for the developer, not just inside this repo.
+
+[tools]
+herdr = "0.9.3"
+"github:earendil-works/pi" = "1.0.2"
+# pi installs npm/git packages (skills, extensions) with npm, so node stays.
+node = "24"
+gh = "2.96.0"
+ripgrep = "15"
+fd = "10"
+jq = "1.8"
