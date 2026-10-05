@@ -17,12 +17,14 @@ git clone https://github.com/YOUR_ORG/agent-kit.git ~/agent-kit
 ~/agent-kit/setup.sh
 ```
 
-Then, once per machine:
+Partway through, setup opens pi so you can log in to GitHub Copilot:
 
-1. Open a new terminal.
-2. Run `pi` and type `/login`.
-3. Choose **GitHub Copilot**.
-4. Run `herdr` to start working.
+1. Type `/login` and choose **GitHub Copilot**.
+2. Type `/quit`, and setup continues.
+
+When it's done, open a new terminal and run `herdr` to start working.
+
+If a step fails, setup offers to open pi to diagnose and fix it. pi clears whatever blocked the setup, then re-runs it, so your machine still ends up the same as everyone else's.
 
 ## Add or remove a skill
 
@@ -69,7 +71,7 @@ Then run `./setup.sh`, and commit `apm.yml` together with `apm.lock.yaml`.
    ```
    ProxyCommand gcloud compute start-iap-tunnel %h 22 --listen-on-stdin --zone=ZONE --project=PROJECT
    ```
-2. On the VM, follow "Set up" above. The Copilot `/login` works over SSH.
+2. On the VM, follow "Set up" above. The Copilot login works over SSH.
 3. Use it in either of two ways:
    - **From your Mac:** run `herdr machine add devbox` once, then `herdr --remote devbox`.
    - **On its own:** SSH in, run `herdr`, start agents and detach. They keep running until the VM reboots.
@@ -78,6 +80,7 @@ Then run `./setup.sh`, and commit `apm.yml` together with `apm.lock.yaml`.
 
 | Problem | Fix |
 |---|---|
+| `setup.sh` failed | Accept its offer to open pi. Or, later, run `pi -a @.setup-failure.md` in this folder. |
 | `pi` or `herdr` not found after setup | Open a new terminal. |
 | An old `pi` (from npm or Homebrew) runs instead | Make the `mise activate` line the last line of `~/.zshrc`, or uninstall the old one. |
 | pi says "The requested model is not supported" | Unset `COPILOT_GITHUB_TOKEN` and use `/login`. pi doesn't handle that variable correctly for Copilot. |

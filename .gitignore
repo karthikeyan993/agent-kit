@@ -1,6 +1,7 @@
-# Written by setup.sh / apm
+# Written by setup.sh and apm
 .agents/
 apm_modules/
+.setup-failure.md
 
 .DS_Store
 .env

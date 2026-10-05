@@ -4,8 +4,9 @@
 #
 #   scripts/test.sh        (KEEP=1 keeps the sandbox for a look afterwards)
 #
-# It runs setup.sh three times: on a new machine, after adding two skills
-# (one from GitHub, one from skills/), and after removing one of them.
+# It runs setup.sh on a new machine, after adding two skills (one from
+# GitHub, one from skills/), after removing one, with a broken link (it
+# must fail and point to pi), and after fixing the link.
 set -euo pipefail
 
 KIT_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -129,6 +130,29 @@ if [ "$(grep -c 'mise activate bash' "$HOME_DIR/.bashrc")" = 1 ]; then
   ok "shell setup added once across three runs"
 else
   bad "shell setup line added $(grep -c 'mise activate bash' "$HOME_DIR/.bashrc") times"
+fi
+
+# A broken skill link: setup must stop, describe the failure, and point to pi.
+BROKEN="agent-kit-test-no-such-org/no-such-repo/skill#v0.0.0"
+cp "$KIT/apm.yml" "$SANDBOX/apm.yml.good"
+printf '    - %s\n' "$BROKEN" >>"$KIT/apm.yml"
+if "${ENV[@]}" bash "$KIT/setup.sh" </dev/null >"$SANDBOX/setup4.log" 2>&1; then
+  bad "setup.sh run 4 (broken skill link) should have failed"
+else
+  ok "setup.sh run 4 (broken skill link) failed as it should"
+fi
+if grep -q 'Step: Installing skills' "$KIT/.setup-failure.md" 2>/dev/null &&
+  grep -q 'pi -a @.setup-failure.md' "$SANDBOX/setup4.log"; then
+  ok "failure note names the step, and setup points to pi"
+else
+  bad "no usable failure note or pi hint; see $SANDBOX/setup4.log"
+fi
+cp "$SANDBOX/apm.yml.good" "$KIT/apm.yml"
+run_setup 5 "link fixed"
+if [ ! -e "$KIT/.setup-failure.md" ]; then
+  ok "failure note removed after a clean run"
+else
+  bad "failure note still there after a clean run"
 fi
 
 if [ "$failed" = 0 ] && [ -z "${KEEP:-}" ]; then

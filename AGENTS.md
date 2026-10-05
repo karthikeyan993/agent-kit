@@ -10,9 +10,19 @@ This repo sets up herdr, pi and team skills on developer Macs and GCP Linux VMs.
 - Never commit credentials: `~/.pi/agent/auth.json`, tokens, `.env`.
 - When behavior changes, update README.md.
 
+## When setup.sh fails
+
+`setup.sh` opens you with `.setup-failure.md`, which names the step and command that failed. Every machine must end up exactly as `setup.sh` makes it, so your job is to clear what blocked the script, not to do its work another way.
+
+1. Re-run `./setup.sh` to see the full error. It's safe to re-run. Your shell has no terminal, so its login steps are skipped; if a login is the problem, ask the user to run `gh auth login` or `/login`.
+2. Fix the cause on this machine, for example a proxy setting, a missing system package, or a broken install folder. Ask the user before running `sudo`, editing shell startup files, or deleting anything outside this repo.
+3. Don't edit `mise.toml`, `apm.yml` or `pi-settings.json` to get past an error, and don't install the tools some other way.
+4. You're done when `./setup.sh` finishes without errors. Tell the user what was wrong and what you changed.
+5. If other machines would hit the same problem, propose the fix to `setup.sh` itself and run `scripts/test.sh`. Leave committing and pushing to the user.
+
 ## Status
 
-Verified with `scripts/test.sh` (all 18 checks) on macOS 26 arm64 and Ubuntu 24.04 arm64, 2026-10-05. `./setup.sh --update` was also checked by hand.
+Verified with `scripts/test.sh` (all 22 checks, including a failed setup that points to pi) on macOS 26 arm64 and Ubuntu 24.04 arm64, 2026-10-05. Checked by hand: `./setup.sh --update`, and in a terminal the Copilot login hand-off and both answers to "Open pi to fix it?" (pi opened with the failure note, `AGENTS.md` and the skills loaded).
 
 Not yet verified:
 
