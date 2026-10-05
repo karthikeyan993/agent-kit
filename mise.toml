@@ -2,6 +2,11 @@
 # Add a line to add a tool; change a version to upgrade. Then run ./setup.sh.
 # (`mise outdated --bump` lists newer versions.)
 
+# The oldest mise this kit works with. setup.sh installs mise if it's missing
+# and updates it if it's older. Newer is fine: mise's docs advise keeping mise
+# current, and the tools below are pinned either way.
+min_version = "2026.10.1"
+
 [tools]
 herdr = "0.9.3"                        # keep the same on laptops and VMs
 "github:earendil-works/pi" = "1.0.2"
@@ -12,3 +17,6 @@ gh = "2.96.0"
 ripgrep = "15.2.0"
 fd = "10.5.0"
 jq = "1.8.2"
+
+[env]
+PI_SKIP_VERSION_CHECK = "1"            # versions come from this file, not `pi update`

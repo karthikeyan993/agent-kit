@@ -5,7 +5,7 @@ Every folder here that contains a `SKILL.md` is a skill everyone gets.
 - **Add:** create the folder.
 - **Remove:** delete the folder.
 
-Nothing else needs changing. Each developer gets the change after `git pull` + `./setup.sh`.
+Nothing else needs changing. Each developer gets the change on their next `./setup.sh`.
 
 ```
 skills/code-review/SKILL.md

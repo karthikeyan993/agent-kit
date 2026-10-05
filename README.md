@@ -9,9 +9,23 @@ One command sets up a Mac or a Linux VM for AI coding agents:
 
 ## Set up
 
+On a new machine, nothing is installed yet and this repo is private, so first get mise, log in to GitHub, and clone with GitHub's `gh` (run through mise):
+
 ```bash
-git clone https://github.com/YOUR_ORG/agent-kit.git ~/agent-kit
+curl -fsSL https://mise.run | MISE_INSTALL_HELP=0 sh
 ```
+
+```bash
+~/.local/bin/mise x gh -- gh auth login --hostname github.com --git-protocol https --web
+```
+
+```bash
+~/.local/bin/mise x gh -- gh repo clone YOUR_ORG/agent-kit ~/agent-kit
+```
+
+On a Mac, if a window asks to install the command line developer tools, accept, then run the last command again.
+
+Then run setup:
 
 ```bash
 ~/agent-kit/setup.sh
@@ -57,7 +71,7 @@ https://github.com/mattpocock/skills/tree/v1.3.1/skills/productivity/grill-me
 ]
 ```
 
-**4. Run `./setup.sh`, then commit** so the team gets it on their next `git pull && ./setup.sh`.
+**4. Run `./setup.sh`, then commit** so the team gets it on their next `./setup.sh`.
 
 **5. Use it.** In pi, type `/skill:grill-me`.
 
@@ -75,29 +89,43 @@ Then run `./setup.sh`.
 
 ### Rules
 
-- **Always pin** to a tag (`@v1.3.1`) or a full commit SHA. `setup.sh` refuses links without one, so every machine gets the same version.
+- **Always pin** to a version tag (`@v1.3.1` or `@1.3.1`) or a full commit SHA. `setup.sh` refuses anything else, including branches like `@main`, which move. If a repo's tags don't start with `v` or a digit, use the commit SHA.
+- **Other people's repos:** prefer the commit SHA. Its owner can move a tag, and your agent follows a skill's instructions. `gh api repos/OWNER/REPO/commits/TAG --jq .sha` prints the SHA for a tag.
 - **Repo layout:** pi finds a repo's skills in its `skills/` folder, or wherever the repo's `package.json` points with `"pi": {"skills": [...]}`. Matt's and Anthropic's skill repos both use `skills/`.
 - **Removing:** removing an entry removes those skills from every machine. Packages a developer installed themselves aren't touched.
 - **Format:** entries use pi's own package format, so they can also bring pi extensions and prompt templates.
+
+## Add a tool
+
+Add a line under `[tools]` in [mise.toml](mise.toml) with an exact version, run `./setup.sh`, then commit. `scripts/test.sh` checks every tool listed there.
+
+| The tool is | Line to add |
+|---|---|
+| Known to mise (`mise registry NAME` prints its sources) | `NAME = "1.2.3"` |
+| Released on GitHub as ready-built binaries | `"github:OWNER/REPO" = "1.2.3"` |
+| An npm package | `"npm:PACKAGE" = "1.2.3"` |
+
+Environment variables everyone needs go under `[env]` in the same file.
 
 ## Keep up to date
 
 | What happened | Run |
 |---|---|
-| Someone pushed changes to this repo | `git pull && ./setup.sh` |
-| You edited `pi-settings.json`, `mise.toml` or `skills/` | `./setup.sh` |
+| Someone pushed changes to this repo | `~/agent-kit/setup.sh`. It pulls them first. |
+| You edited `pi-settings.json`, `mise.toml` or `skills/` | `./setup.sh`. It doesn't pull while you have uncommitted changes. |
 | A skill repo has a new release | Change its `@tag` in `pi-settings.json`, then run `./setup.sh` |
 | You want a newer tool | Change its version in `mise.toml`, then run `./setup.sh` (`mise outdated --bump` lists newer versions) |
+| The kit needs a newer mise | Raise `min_version` in `mise.toml`. `setup.sh` updates mise on machines with an older one. |
 
-`setup.sh` is always safe to re-run. Don't use `herdr update` or `pi update self`; versions come from this repo.
+`setup.sh` is always safe to re-run. Versions come from this repo, so don't run `herdr update` or plain `pi update`, which updates pi itself. `pi update --extensions` is fine.
 
 ## What's in here
 
 | File | Controls |
 |---|---|
-| `setup.sh` | Installs or updates everything. It has no lists of its own. |
-| `mise.toml` | Tools and their versions |
-| `pi-settings.json` | pi defaults and skill packages. These keys are reset on every run; your other pi settings aren't touched. |
+| `setup.sh` | Pulls this repo, then installs or updates everything. It has no lists of its own. |
+| `mise.toml` | Tools and their versions, the oldest mise that works, and environment variables |
+| `pi-settings.json` | pi defaults and skill packages. These keys are reset on every run, and a key deleted here is deleted on every machine; your other pi settings aren't touched. |
 | `skills/` | Skills written in this repo |
 | `scripts/test.sh` | For maintainers: runs `setup.sh` on a pretend new machine and checks the result |
 
@@ -107,7 +135,7 @@ Then run `./setup.sh`.
    ```
    ProxyCommand gcloud compute start-iap-tunnel %h 22 --listen-on-stdin --zone=ZONE --project=PROJECT
    ```
-2. On the VM, follow "Set up" above. The Copilot login works over SSH.
+2. On the VM (`ssh devbox`), follow "Set up" above. Both logins, GitHub and Copilot, work over SSH, and each VM needs them once.
 3. Use it in either of two ways:
    - **From your Mac:** run `herdr machine add devbox` once, then `herdr --remote devbox`.
    - **On its own:** SSH in, run `herdr`, start agents and detach. They keep running until the VM reboots.
@@ -118,6 +146,8 @@ Then run `./setup.sh`.
 |---|---|
 | `setup.sh` failed | Accept its offer to open pi. Or, later, run `pi -a @.setup-failure.md` in this folder. |
 | `pi` or `herdr` not found after setup | Open a new terminal. |
+| setup says "Not pulling the latest kit" | You have uncommitted changes in `~/agent-kit` (`git status` lists them). Commit or discard them, then re-run `./setup.sh`. |
+| `herdr --remote` runs a different herdr on the VM | Re-run `~/agent-kit/setup.sh` on the VM. Then `ssh devbox 'command -v herdr'` should print a path in `~/.local/share/mise/shims`. |
 | An old `pi` (from npm or Homebrew) runs instead | Make the `mise activate` line the last line of `~/.zshrc`, or uninstall the old one. |
 | pi says "The requested model is not supported" | Unset `COPILOT_GITHUB_TOKEN` and use `/login`. pi doesn't handle that variable correctly for Copilot. |
 | `gpt-6-luna` isn't available | Your org's Copilot policy hasn't enabled it. Ask the Copilot admin. |

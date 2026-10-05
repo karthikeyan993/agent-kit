@@ -22,7 +22,7 @@ This repo sets up herdr, pi and team skills on developer Macs and GCP Linux VMs.
 
 ## Status
 
-Verified with `scripts/test.sh` (22 checks: install, team adds and removes skills, personal package kept, unpinned link refused, broken link hands off to pi) on macOS 26 arm64 and Ubuntu 24.04 arm64, 2026-10-05. Checked by hand in a terminal: the Copilot login hand-off and both answers to "Open pi to fix it?".
+Verified with `scripts/test.sh` (27 checks: install; mise at least `min_version`, and an older one updated; every tool in `mise.toml`; new terminals and one-command shells find the tools; team adds and removes skills and a setting; personal package and setting kept; unpinned and `@main` links refused; broken link hands off to pi; setup pulls a pushed fix) on macOS 26 arm64, 2026-10-05. The earlier 22-check version also passed on Ubuntu 24.04 arm64; this version hasn't been run there yet. Checked by hand: the Copilot login hand-off and both answers to "Open pi to fix it?" (earlier version), zsh shell setup in the sandbox, and `gh repo clone` over HTTPS for a private repo with no git credentials set up (the README's Set up steps).
 
 Not yet verified:
 
@@ -30,14 +30,15 @@ Not yet verified:
 2. Private skill repos. pi clones them with git, which uses the `gh auth login` through `gh auth setup-git`. This is untested.
 3. The office network: proxy, TLS inspection, blocked downloads.
 4. A GCP VM end to end, with `herdr machine add` and `herdr --remote` from a Mac.
-5. Whether herdr's SSH connection finds the mise-installed `herdr` on the VM. If it offers to install its own copy into `~/.local/bin`, it couldn't.
+5. Whether herdr's SSH connection finds the mise-installed `herdr` on the VM. herdr runs `command -v herdr` in the SSH shell; `setup.sh` now puts mise's shims at the top of `.bashrc` for that, which `scripts/test.sh` simulates. If `herdr machine add` still installs its own copy into `~/.local/bin`, it didn't work.
+6. The README's Set up steps on a brand-new Mac, including the `gh auth login` in a browser.
 
 ## Your tasks (office laptop)
 
 Do these in order. After each one, update "Status" and commit fixes with a message that says what failed.
 
 1. Ask the user for the GitHub org. Replace `YOUR_ORG` in README.md.
-2. Run `scripts/test.sh`. If downloads fail, check for a proxy; `ENV` in the script uses `env -i`, so a needed `HTTPS_PROXY` must be added there.
+2. Run `scripts/test.sh`. If downloads fail, check for a proxy: set `HTTPS_PROXY` and `NO_PROXY` (and `SSL_CERT_FILE` or `NODE_EXTRA_CA_CERTS` for TLS inspection) in your shell. The script passes them into its sandbox.
 3. Ask the user for the team's skill repos. Add them to `packages` in `pi-settings.json`, pinned with `@tag` or `@commit` (README.md shows the format). Each repo needs a `skills/` folder or a `package.json` with `"pi": {"skills": [...]}`; if one doesn't have either, tell the user. Run `scripts/test.sh` again, then commit.
 4. Only with the user's go-ahead:
    - Run `./setup.sh`. The user does the `/login` themselves.
@@ -45,5 +46,5 @@ Do these in order. After each one, update "Status" and commit fixes with a messa
 5. GCP VM, with the user. They create the VM and its SSH access; don't create cloud resources yourself.
    - On the VM, run `scripts/test.sh`, then `./setup.sh`.
    - From the Mac, run `herdr machine add` and then `herdr --remote`.
-   - Check item 5 above.
+   - Check items 5 and 6 above.
 6. Report to the user what passed, what failed, and what you changed.
