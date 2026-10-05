@@ -1,91 +1,92 @@
 # agent-kit
 
-Our team's setup for AI coding agents. One command gives a developer's Mac or a GCP VM:
+One command sets up a Mac or a Linux VM for AI coding agents:
 
-- **herdr**: a terminal workspace for running and watching many agents
-- **pi**: the coding agent, using GitHub Copilot with `gpt-6-luna` at `xhigh` thinking
-- **team skills**: installed as pi packages
-- **everything they depend on**: at exact, pinned versions
+- **herdr**: a terminal workspace for running many agents
+- **pi**: the coding agent, using GitHub Copilot (`gpt-6-luna`, `xhigh` thinking)
+- **team skills**
+- the tools these need, at pinned versions
 
-## Quick start
+## Set up
 
 ```bash
 git clone https://github.com/YOUR_ORG/agent-kit.git ~/agent-kit
 ```
 
 ```bash
-~/agent-kit/bootstrap.sh
+~/agent-kit/setup.sh
 ```
-
-It takes a few minutes the first time. If you aren't logged in to GitHub yet, it opens the login in your browser. It finishes with a health check that shows anything left to do.
 
 Then, once per machine:
 
 1. Open a new terminal.
 2. Run `pi` and type `/login`.
-3. Choose **GitHub Copilot**. Leave the Enterprise domain blank unless we're on `*.ghe.com`.
-4. Enter the code shown at github.com/login/device.
-5. Run `herdr` and start working.
+3. Choose **GitHub Copilot**.
+4. Run `herdr` to start working.
 
-You can run the health check any time:
+## Add or remove a skill
 
-```bash
-~/agent-kit/scripts/doctor.sh
+Skills are listed in [apm.yml](apm.yml), one line each:
+
+```yaml
+dependencies:
+  apm:
+    - your-org/agent-skills/skills/code-review#v1.0.0   # one skill, pinned to a tag
+    - your-org/more-skills                               # every skill in a repo
+    - ./skills/my-skill                                  # a skill written in this repo
 ```
 
-## Staying up to date
+- **Add:** add a line. Alternatively, run `apm install <link>` in this folder, which adds the line for you.
+- **Remove:** delete the line.
 
-```bash
-git -C ~/agent-kit pull && ~/agent-kit/bootstrap.sh
-```
+Then run `./setup.sh`, and commit `apm.yml` together with `apm.lock.yaml`.
 
-Re-running is always safe. Don't use `herdr update` or `pi update self`; versions are managed in this repo.
+## Keep up to date
 
-## Remote agents on GCP
-
-Run the same quick start on a GCP VM. Then you can do either:
-
-- attach to it from your Mac with `herdr --remote`, or
-- leave agents running there on their own.
-
-See [docs/remote-gcp.md](docs/remote-gcp.md).
-
-## What's in this repo
-
-```
-bootstrap.sh          Entry point: runs steps/ in order, then the health check
-config/               Everything the team decides. Most PRs only touch this folder.
-  mise.toml             Tools and their exact versions
-  pi-settings.json      pi defaults: provider, model, thinking level
-  pi-packages.txt       Skill packages every developer gets
-steps/                One small script per setup step, run in filename order
-lib/                  Shared helpers: logging, check output, settings merge rules
-scripts/
-  doctor.sh             Read-only health check
-  test-sandbox.sh       Fresh-machine test in a throwaway HOME (CI runs it)
-  lint.sh               Static checks (CI runs it)
-docs/                 How it works, maintaining, remote VMs, troubleshooting, decisions
-AGENTS.md             Instructions for coding agents working on this repo
-```
-
-## Documentation
-
-| Read this | When you want to |
+| What happened | Run |
 |---|---|
-| [docs/architecture.md](docs/architecture.md) | Understand what gets installed, and where |
-| [docs/maintaining.md](docs/maintaining.md) | Bump a version, add a skill, change a default, or release |
-| [docs/remote-gcp.md](docs/remote-gcp.md) | Run agents on a GCP VM |
-| [docs/troubleshooting.md](docs/troubleshooting.md) | Fix a failed check or a broken setup |
-| [docs/decisions.md](docs/decisions.md) | Know why it's built this way |
+| Someone pushed changes to this repo | `git pull && ./setup.sh` |
+| You edited `apm.yml`, `mise.toml` or `pi-settings.json` | `./setup.sh` |
+| You want the newest versions of the skills | `./setup.sh --update`, then commit `apm.lock.yaml` |
+| You want a newer tool | Change its version in `mise.toml`, then run `./setup.sh` (`mise outdated --bump` lists newer versions) |
 
-## Requirements
+`setup.sh` is always safe to re-run. Don't use `herdr update` or `pi update self`; versions come from this repo.
 
-- macOS, or Linux (Debian or Ubuntu), on x86_64 or arm64
-- `git`, `curl` and `tar` (a new Mac gets them from `xcode-select --install`)
-- A GitHub account with a Copilot seat
+## What's in here
 
-No admin rights are needed. Everything installs into your home directory.
+| File | Controls |
+|---|---|
+| `setup.sh` | Installs or updates everything |
+| `mise.toml` | Tools and their versions |
+| `apm.yml` | Skills |
+| `pi-settings.json` | pi defaults. These keys are reset on every run; your other pi settings aren't touched. |
+| `skills/` | Skills written in this repo |
+| `scripts/test.sh` | For maintainers: runs `setup.sh` on a pretend new machine and checks the result |
 
-## Getting help
+## Remote agents on a GCP VM
 
-Run `scripts/doctor.sh` and send its output to the owners listed in [.github/CODEOWNERS](.github/CODEOWNERS).
+1. Make `ssh devbox` work. Use `gcloud compute config-ssh`, or, for IAP-only VMs, add a `Host devbox` entry with:
+   ```
+   ProxyCommand gcloud compute start-iap-tunnel %h 22 --listen-on-stdin --zone=ZONE --project=PROJECT
+   ```
+2. On the VM, follow "Set up" above. The Copilot `/login` works over SSH.
+3. Use it in either of two ways:
+   - **From your Mac:** run `herdr machine add devbox` once, then `herdr --remote devbox`.
+   - **On its own:** SSH in, run `herdr`, start agents and detach. They keep running until the VM reboots.
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `pi` or `herdr` not found after setup | Open a new terminal. |
+| An old `pi` (from npm or Homebrew) runs instead | Make the `mise activate` line the last line of `~/.zshrc`, or uninstall the old one. |
+| pi says "The requested model is not supported" | Unset `COPILOT_GITHUB_TOKEN` and use `/login`. pi doesn't handle that variable correctly for Copilot. |
+| `gpt-6-luna` isn't available | Your org's Copilot policy hasn't enabled it. Ask the Copilot admin. |
+| herdr says the server version differs | When no agents are running: `herdr server stop`, then `herdr`. |
+| Downloads fail at the office | `export HTTPS_PROXY=…`, then re-run `./setup.sh`. |
+
+## Why these tools
+
+- **mise** installs every tool from one file, on macOS and Linux, without admin rights.
+- **APM** (Microsoft's Agent Package Manager) installs skills from links. Its lockfile keeps every machine on the same skill versions, and it removes a skill when its line is deleted.
+- **Copilot `/login`** rather than a token: pi sends a token from the environment straight to Copilot, which rejected every request in our test.

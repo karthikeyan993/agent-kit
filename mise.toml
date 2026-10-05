@@ -1,0 +1,15 @@
+# Tools every machine gets, at exact versions.
+# Add a line to add a tool; change a version to upgrade. Then run ./setup.sh.
+# (`mise outdated --bump` lists newer versions.)
+
+[tools]
+herdr = "0.9.3"                        # keep the same on laptops and VMs
+"github:earendil-works/pi" = "1.0.2"
+apm = "0.33.0"                         # installs the skills in apm.yml
+
+# Needed by pi, the skills and setup.sh
+node = "24.21.0"
+gh = "2.96.0"
+ripgrep = "15.2.0"
+fd = "10.5.0"
+jq = "1.8.2"

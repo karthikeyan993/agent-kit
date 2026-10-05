@@ -1,3 +1,7 @@
+# Written by setup.sh / apm
+.agents/
+apm_modules/
+
 .DS_Store
 .env
 auth.json
