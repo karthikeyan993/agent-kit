@@ -1,0 +1,24 @@
+# Tools and exact versions every machine gets (developer Macs and GCP VMs).
+# To change a version: edit it here, run scripts/test-sandbox.sh, open a PR.
+# See docs/maintaining.md.
+#
+# bootstrap.sh symlinks this file to ~/.config/mise/conf.d/agent-kit.toml,
+# so these tools are on PATH in every directory, not only inside this repo.
+
+min_version = "2026.10.0"
+
+[tools]
+# The agent stack.
+# herdr must be the same version on laptops and VMs: client and server talk
+# over a versioned protocol.
+herdr = "0.9.3"
+"github:earendil-works/pi" = "1.0.2"
+
+# Used by pi and the team skills.
+node = "24.21.0"     # pi runs `npm install` for packages that have dependencies
+ripgrep = "15.2.0"   # pi's search tools; without it pi downloads an unpinned copy
+fd = "10.5.0"        # same as ripgrep
+gh = "2.96.0"        # GitHub login and access to private skill repos
+
+# Used by bootstrap.sh itself.
+jq = "1.8.2"

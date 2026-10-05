@@ -1,5 +1,0 @@
-# Pi packages every developer gets (skills, extensions, prompts, themes).
-# One source per line; pin git sources to a tag so updates are deliberate.
-# Private GitHub repos work once `gh auth setup-git` has run (bootstrap does it).
-#
-# git:github.com/YOUR_ORG/agent-skills@v0.1.0

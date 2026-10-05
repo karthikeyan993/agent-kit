@@ -1,0 +1,10 @@
+# pi packages every developer gets: skills, extensions, prompt templates.
+#
+# One source per line. Pin git sources to a tag so updates are deliberate.
+#   Add a line     -> installed on the next bootstrap run.
+#   Change the tag -> re-installed at the new tag.
+#   Delete a line  -> removed from machines that got it from this file.
+# Packages a developer installed themselves are never touched.
+#
+# Example:
+# git:github.com/YOUR_ORG/agent-skills@v0.1.0

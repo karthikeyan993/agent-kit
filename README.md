@@ -1,14 +1,13 @@
 # agent-kit
 
-One command sets up a developer's Mac or a GCP Linux VM with our agent tooling:
+Our team's setup for AI coding agents. One command gives a developer's Mac or a GCP VM:
 
-- **herdr**: terminal multiplexer for coding agents
-- **pi**: coding agent, plus our team skills/extensions as pi packages
-- **node, gh, ripgrep, fd, jq**: what pi and the skills need
+- **herdr**: a terminal workspace for running and watching many agents
+- **pi**: the coding agent, using GitHub Copilot with `gpt-6-luna` at `xhigh` thinking
+- **team skills**: installed as pi packages
+- **everything they depend on**: at exact, pinned versions
 
-All tool versions are pinned in [mise.toml](mise.toml). Team pi packages are listed in [pi-packages.txt](pi-packages.txt). pi defaults to our GitHub Copilot subscription, using `gpt-6-luna` with `xhigh` thinking ([pi-settings.json](pi-settings.json)).
-
-## New developer (macOS)
+## Quick start
 
 ```bash
 git clone https://github.com/YOUR_ORG/agent-kit.git ~/agent-kit
@@ -18,83 +17,75 @@ git clone https://github.com/YOUR_ORG/agent-kit.git ~/agent-kit
 ~/agent-kit/bootstrap.sh
 ```
 
-On a brand-new Mac, the first `git` command asks to install the Xcode Command Line Tools. Accept it, then re-run the clone. If GitHub isn't logged in yet, the bootstrap opens `gh auth login` in your browser. It needs this to fetch our private skill repos.
+It takes a few minutes the first time. If you aren't logged in to GitHub yet, it opens the login in your browser. It finishes with a health check that shows anything left to do.
 
-Then open a new terminal and sign in to GitHub Copilot. You do this once per machine:
+Then, once per machine:
 
-1. Run `pi` and type `/login`.
-2. Pick **GitHub Copilot**.
-3. Leave the Enterprise domain blank, unless we're on `*.ghe.com`.
-4. Enter the device code at github.com/login/device.
+1. Open a new terminal.
+2. Run `pi` and type `/login`.
+3. Choose **GitHub Copilot**. Leave the Enterprise domain blank unless we're on `*.ghe.com`.
+4. Enter the code shown at github.com/login/device.
+5. Run `herdr` and start working.
 
-pi uses its own Copilot sign-in, so `gh auth login` alone isn't enough. Start a workspace with `herdr`.
-
-`bootstrap.sh` does the following:
-
-- Installs [mise](https://mise.jdx.dev) if needed.
-- Links `mise.toml` into `~/.config/mise/conf.d/` so the tools work in every directory, then installs them.
-- Logs in to GitHub if needed, then runs `gh auth setup-git`.
-- Merges `pi-settings.json` into `~/.pi/agent/settings.json`. Keys a developer has already set win.
-- Runs `pi install` for each package in `pi-packages.txt`.
-- Installs herdr's pi integration.
-
-You can re-run it safely. A fresh install takes a few minutes; a re-run takes about a second.
-
-## Updating
-
-- **Everyone:** `git -C ~/agent-kit pull && ~/agent-kit/bootstrap.sh`
-- **Tool bump:** change the version in `mise.toml` and open a PR. Keep one herdr version on every machine, because the client and server must be protocol-compatible.
-- **New or changed skills:** merge to the skills repo, tag it, then bump the `@tag` in `pi-packages.txt`.
-
-Don't use `herdr update` or `pi update self` on these machines, because mise manages those binaries.
-
-## Testing changes
+You can run the health check any time:
 
 ```bash
-scripts/test-sandbox.sh
+~/agent-kit/scripts/doctor.sh
 ```
 
-This runs the bootstrap twice in a throwaway `HOME` with a bare `PATH`, so your real setup is untouched. It then checks:
+## Staying up to date
 
-- Every tool resolves from the sandbox.
-- The team pi settings landed.
-- The second run duplicated nothing.
-- pi loads skills from every package. It prints their names.
-- pi starts on the team default model.
-- herdr's pi integration is installed.
+```bash
+git -C ~/agent-kit pull && ~/agent-kit/bootstrap.sh
+```
 
-Run it before every PR. `KEEP=1` keeps the sandbox for inspection.
+Re-running is always safe. Don't use `herdr update` or `pi update self`; versions are managed in this repo.
 
-## Remote devbox (GCP)
+## Remote agents on GCP
 
-Agents, pi, and the skills run on the VM. Your Mac only needs the herdr client.
+Run the same quick start on a GCP VM. Then you can do either:
 
-1. Create a Linux VM (Debian/Ubuntu, x86_64 or Arm) and make plain `ssh` reach it under one name, because herdr uses the system `ssh`.
-   - **VM with an external IP:**
-     ```bash
-     gcloud compute config-ssh
-     ```
-     This writes `Host <vm>.<zone>.<project>` entries to `~/.ssh/config`.
-   - **IAP only:** add a host entry by hand:
-     ```
-     Host devbox
-       HostName <vm-name>
-       ProxyCommand gcloud compute start-iap-tunnel %h 22 --listen-on-stdin --zone=<zone> --project=<project>
-     ```
-2. SSH in, run the clone and bootstrap commands from "New developer", then do the Copilot `/login`. Device-code login works over SSH. Credentials stay on the VM.
-3. On your Mac:
-   ```bash
-   herdr machine add devbox --label "GCP devbox"
-   ```
-   ```bash
-   herdr --remote devbox
-   ```
-4. From a phone: SSH to the VM and run `herdr` there.
+- attach to it from your Mac with `herdr --remote`, or
+- leave agents running there on their own.
 
-The VM still has the herdr binary, because the same binary runs the server. If herdr can't find one, `herdr machine add` offers to install it into `~/.local/bin`. The bootstrap installs the pinned version instead, so client and server match.
+See [docs/remote-gcp.md](docs/remote-gcp.md).
 
-## Why mise (not Nix, not only APM)
+## What's in this repo
 
-- Everything we need is a first-class mise tool. herdr is in the mise registry, and pi ships GitHub release binaries. One file covers macOS and Linux, with no root and no `/nix` store.
-- pi packages already do what we needed from APM: `pi install git:...@tag` pins and installs skills, extensions, and prompts.
-- Nix gives stronger reproducibility, but pi installs packages with npm at runtime anyway, so that purity ends at the agent. Consider Nix later for building identical devbox images.
+```
+bootstrap.sh          Entry point: runs steps/ in order, then the health check
+config/               Everything the team decides. Most PRs only touch this folder.
+  mise.toml             Tools and their exact versions
+  pi-settings.json      pi defaults: provider, model, thinking level
+  pi-packages.txt       Skill packages every developer gets
+steps/                One small script per setup step, run in filename order
+lib/                  Shared helpers: logging, check output, settings merge rules
+scripts/
+  doctor.sh             Read-only health check
+  test-sandbox.sh       Fresh-machine test in a throwaway HOME (CI runs it)
+  lint.sh               Static checks (CI runs it)
+docs/                 How it works, maintaining, remote VMs, troubleshooting, decisions
+AGENTS.md             Instructions for coding agents working on this repo
+```
+
+## Documentation
+
+| Read this | When you want to |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | Understand what gets installed, and where |
+| [docs/maintaining.md](docs/maintaining.md) | Bump a version, add a skill, change a default, or release |
+| [docs/remote-gcp.md](docs/remote-gcp.md) | Run agents on a GCP VM |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | Fix a failed check or a broken setup |
+| [docs/decisions.md](docs/decisions.md) | Know why it's built this way |
+
+## Requirements
+
+- macOS, or Linux (Debian or Ubuntu), on x86_64 or arm64
+- `git`, `curl` and `tar` (a new Mac gets them from `xcode-select --install`)
+- A GitHub account with a Copilot seat
+
+No admin rights are needed. Everything installs into your home directory.
+
+## Getting help
+
+Run `scripts/doctor.sh` and send its output to the owners listed in [.github/CODEOWNERS](.github/CODEOWNERS).
