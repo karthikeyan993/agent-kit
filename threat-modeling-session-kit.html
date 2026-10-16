@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Threat Modeling Session Kit (STRIDE)</title>
+<style>
+:root {
+  --bg: #faf9f6; --surface: #ffffff; --surface-2: #f3f1ec; --border: #e4e1d9;
+  --ink: #1c1b19; --ink-2: #5d5b55; --ink-3: #8a877f;
+  --accent: #2f6fdf; --accent-soft: rgba(47,111,223,.10);
+  --crit: #c93a3a; --crit-soft: rgba(201,58,58,.12);
+  --high: #d6672a; --high-soft: rgba(214,103,42,.13);
+  --med: #b88a10; --med-soft: rgba(232,166,43,.16);
+  --low: #2f8f4e; --low-soft: rgba(58,166,85,.13);
+  --cds-text-primary: var(--ink); --cds-text-secondary: var(--ink-2);
+  --cds-chart-axis: #b3b0a6; --cds-chart-grid: #dcd9d0; --cds-chart-reference-tint: #ecebe5;
+  --cds-chart-categorical-1: #2f6fdf; --cds-chart-categorical-2: #e2683a; --cds-chart-categorical-3: #1fa67a;
+  --cds-chart-categorical-4: #1f3b6e; --cds-chart-categorical-5: #d0457a; --cds-chart-categorical-6: #2f8f2f;
+  --cds-chart-status-good: #3aa655; --cds-chart-status-warning: #e8a62b; --cds-chart-status-critical: #d64545;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #161614; --surface: #1e1e1b; --surface-2: #262622; --border: #34332e;
+  --ink: #ecebe6; --ink-2: #b2b0a8; --ink-3: #85837b;
+  --accent: #6b9cf5; --accent-soft: rgba(107,156,245,.14);
+  --crit: #f07070; --crit-soft: rgba(240,112,112,.16); --high: #f0965a; --high-soft: rgba(240,150,90,.16);
+  --med: #e8c25a; --med-soft: rgba(232,194,90,.16); --low: #6cc98a; --low-soft: rgba(108,201,138,.15);
+  --cds-chart-axis: #6c6a62; --cds-chart-grid: #3a3934; --cds-chart-reference-tint: #2b2b27;
+  --cds-chart-categorical-1: #6b9cf5; --cds-chart-categorical-2: #f08a5d; --cds-chart-categorical-3: #4cc79a;
+  --cds-chart-categorical-4: #8aa6dc; --cds-chart-categorical-5: #ea79a4; --cds-chart-categorical-6: #6fc46f;
+  --cds-chart-status-good: #5cc77a; --cds-chart-status-warning: #f0bd4f; --cds-chart-status-critical: #f07070;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #161614; --surface: #1e1e1b; --surface-2: #262622; --border: #34332e;
+  --ink: #ecebe6; --ink-2: #b2b0a8; --ink-3: #85837b;
+  --accent: #6b9cf5; --accent-soft: rgba(107,156,245,.14);
+  --crit: #f07070; --crit-soft: rgba(240,112,112,.16); --high: #f0965a; --high-soft: rgba(240,150,90,.16);
+  --med: #e8c25a; --med-soft: rgba(232,194,90,.16); --low: #6cc98a; --low-soft: rgba(108,201,138,.15);
+  --cds-chart-axis: #6c6a62; --cds-chart-grid: #3a3934; --cds-chart-reference-tint: #2b2b27;
+  --cds-chart-categorical-1: #6b9cf5; --cds-chart-categorical-2: #f08a5d; --cds-chart-categorical-3: #4cc79a;
+  --cds-chart-categorical-4: #8aa6dc; --cds-chart-categorical-5: #ea79a4; --cds-chart-categorical-6: #6fc46f;
+  --cds-chart-status-good: #5cc77a; --cds-chart-status-warning: #f0bd4f; --cds-chart-status-critical: #f07070;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-underline-offset: 3px; }
+.layout { display: grid; grid-template-columns: 248px minmax(0, 1fr); max-width: 1180px; margin: 0 auto; gap: 48px; padding: 0 32px; }
+nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 40px 0 24px; }
+.toc .brand { font-weight: 650; font-size: 14px; letter-spacing: .02em; margin-bottom: 4px; }
+.toc .brand-sub { font-size: 12.5px; color: var(--ink-3); margin-bottom: 24px; }
+.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+.toc li { counter-increment: s; }
+.toc a { display: flex; gap: 10px; padding: 7px 10px; border-radius: 8px; color: var(--ink-2); text-decoration: none; font-size: 14px; line-height: 1.35; }
+.toc a::before { content: counter(s, decimal-leading-zero); font: 500 11.5px/1.9 var(--mono); color: var(--ink-3); }
+.toc a:hover { background: var(--surface-2); color: var(--ink); }
+.toc a.active { background: var(--accent-soft); color: var(--ink); }
+.toc a.active::before { color: var(--accent); }
+.theme-btn { margin-top: 24px; font: 500 12.5px var(--sans); color: var(--ink-2); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+main { padding: 40px 0 96px; min-width: 0; }
+header.hero { padding: 40px 0 36px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.eyebrow { font: 600 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: clamp(32px, 5vw, 46px); line-height: 1.08; letter-spacing: -.025em; margin: 12px 0 16px; font-weight: 700; }
+.lede { font-size: 18.5px; color: var(--ink-2); max-width: 62ch; margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.chip { font-size: 13px; padding: 4px 11px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); color: var(--ink-2); }
+section { padding-top: 56px; }
+.sec-num { font: 600 12px var(--mono); color: var(--ink-3); letter-spacing: .1em; }
+h2 { font-size: 28px; letter-spacing: -.02em; line-height: 1.2; margin: 6px 0 14px; }
+h3 { font-size: 19px; margin: 36px 0 10px; letter-spacing: -.01em; }
+h4 { font-size: 15px; margin: 26px 0 8px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+p { margin: 0 0 14px; max-width: 72ch; }
+.point { font-size: 17.5px; color: var(--ink); }
+ul, ol.list { padding-left: 22px; margin: 0 0 16px; max-width: 72ch; }
+li { margin: 4px 0; }
+li::marker { color: var(--ink-3); }
+figure { margin: 24px 0 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 18px 10px; }
+figure svg { display: block; width: 100%; height: auto; font-family: var(--sans); }
+figcaption { font-size: 12.5px; color: var(--ink-3); padding: 8px 6px 4px; border-top: 1px dashed var(--border); margin-top: 8px; }
+.table-wrap { overflow-x: auto; margin: 18px 0 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th { text-align: left; font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); background: var(--surface-2); }
+th, td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.c { text-align: center; }
+.mono { font-family: var(--mono); font-size: 13px; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.crit { color: var(--crit); background: var(--crit-soft); } .high { color: var(--high); background: var(--high-soft); }
+.med { color: var(--med); background: var(--med-soft); } .low { color: var(--low); background: var(--low-soft); }
+.L { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; font: 700 12.5px var(--mono); color: #fff; }
+.L.S { background: var(--cds-chart-categorical-1); } .L.T { background: var(--cds-chart-categorical-2); } .L.R { background: var(--cds-chart-categorical-3); }
+.L.I { background: var(--cds-chart-categorical-4); } .L.D { background: var(--cds-chart-categorical-5); } .L.E { background: var(--cds-chart-categorical-6); }
+.check { color: var(--accent); font-weight: 700; }
+blockquote { margin: 16px 0 22px; padding: 18px 22px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; font-size: 17px; max-width: 72ch; }
+blockquote p { margin: 0; }
+.callout { border: 1px solid var(--border); background: var(--surface); border-radius: 14px; padding: 18px 22px; margin: 20px 0; }
+.callout.warn { border-color: color-mix(in srgb, var(--high) 45%, var(--border)); background: var(--high-soft); }
+.callout .label { font: 600 11.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); display: block; margin-bottom: 6px; }
+.callout p:last-child { margin-bottom: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 16px 0 24px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.card h5 { margin: 0 0 6px; font-size: 15px; }
+.card p, .card ul { margin: 0; font-size: 14.5px; color: var(--ink-2); }
+.card ul { padding-left: 18px; }
+.qbank { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 16px 0; }
+.qbank .card { border-top: 3px solid var(--c); }
+.qbank .card h5 { display: flex; align-items: center; gap: 10px; }
+.qbank li { margin: 6px 0; }
+.say { margin: 14px 0; padding: 14px 18px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); display: grid; grid-template-columns: 36px 1fr; gap: 14px; align-items: start; }
+.say .L { width: 32px; height: 32px; font-size: 15px; border-radius: 9px; }
+.say p { margin: 0; }
+.say q { font-style: italic; }
+.steps { counter-reset: st; list-style: none; padding: 0; margin: 16px 0 24px; }
+.steps > li { counter-increment: st; position: relative; padding: 2px 0 14px 46px; margin: 0; }
+.steps > li::before { content: counter(st); position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); display: grid; place-items: center; font: 600 13px var(--mono); color: var(--accent); }
+.steps > li:not(:last-child)::after { content: ""; position: absolute; left: 15px; top: 34px; bottom: 2px; width: 1px; background: var(--border); }
+.tasks { list-style: none; padding: 0; }
+.tasks li { padding-left: 30px; position: relative; }
+.tasks li::before { content: ""; position: absolute; left: 0; top: 5px; width: 16px; height: 16px; border: 1.5px solid var(--ink-3); border-radius: 4px; }
+.pattern { font-family: var(--mono); font-size: 14px; background: var(--surface-2); padding: 12px 14px; border-radius: 10px; display: block; margin: 8px 0; }
+footer { margin-top: 72px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--ink-3); font-size: 13px; }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; padding: 0 16px; gap: 0; }
+  nav.toc { position: static; height: auto; padding: 24px 0 0; }
+  .toc ol { display: none; } .theme-btn { margin-top: 8px; }
+  figure { padding: 10px 8px 6px; border-radius: 10px; }
+  section { padding-top: 40px; }
+}
+@media print {
+  nav.toc { display: none; } .layout { display: block; max-width: none; padding: 0; }
+  body { background: #fff; font-size: 11pt; } section { break-inside: auto; } figure, .table-wrap, .say, .card { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="Contents">
+  <div class="brand">Threat Modeling Kit</div>
+  <div class="brand-sub">STRIDE · Secret rotator</div>
+  <ol>
+    <li><a href="#glance">Session at a glance</a></li>
+    <li><a href="#intro">What threat modeling is</a></li>
+    <li><a href="#concepts">Core concepts</a></li>
+    <li><a href="#stride">STRIDE, letter by letter</a></li>
+    <li><a href="#exercise">Running the exercise</a></li>
+    <li><a href="#rotator">Applying it to the rotator</a></li>
+    <li><a href="#risk">Rating risks</a></li>
+    <li><a href="#after">After the session</a></li>
+    <li><a href="#refs">References</a></li>
+  </ol>
+  <button class="theme-btn" type="button" id="themeBtn">Toggle theme</button>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">Facilitator kit · for newcomers and juniors</div>
+  <h1>Threat Modeling Session Kit (STRIDE)</h1>
+  <p class="lede">Everything you need to run a 90-minute STRIDE threat modeling session on the automatic secret rotator: the theory, a script, a question bank, a worked example, and the report AppSec expects afterwards.</p>
+  <div class="meta">
+    <span class="chip">Karthikeyan</span>
+    <span class="chip">16 Oct 2026</span>
+    <span class="chip">Playwright · Cloud Run · Okta · 1Password · Zendesk</span>
+  </div>
+</header>
+
+<section id="glance">
+  <div class="sec-num">01</div>
+  <h2>Session at a glance</h2>
+  <p class="point">A 90-minute session: 25 minutes of theory, 50 minutes of hands-on STRIDE on the secret rotator, 15 minutes to rate risks and assign owners. Split into two 60-minute sessions if the group is slow or large.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Time</th><th>Block</th><th>What you do</th><th>Output</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">0–5</td><td>Opening</td><td>Goal of the session, ground rules</td><td>Shared expectations</td></tr>
+      <tr><td class="mono">5–20</td><td>What is threat modeling</td><td>The 4 questions, why we do it, STRIDE overview</td><td>Common vocabulary</td></tr>
+      <tr><td class="mono">20–30</td><td>Draw the system</td><td>Build the data flow diagram (DFD) together on a whiteboard</td><td>DFD with trust boundaries</td></tr>
+      <tr><td class="mono">30–75</td><td>STRIDE walkthrough</td><td>One letter at a time, ~7 min each, using the question bank</td><td>Raw threat list</td></tr>
+      <tr><td class="mono">75–85</td><td>Rate and mitigate</td><td>Score each threat (High/Med/Low), propose a control</td><td>Prioritized threat register</td></tr>
+      <tr><td class="mono">85–90</td><td>Wrap-up</td><td>Owners, next steps, retro: “did we do a good job?”</td><td>Action items</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Roles to assign before you start</h3>
+  <div class="grid2">
+    <div class="card"><h5>Facilitator (you)</h5><p>Keeps time, asks the STRIDE questions, stops the group going down rabbit holes.</p></div>
+    <div class="card"><h5>Scribe</h5><p>Writes every threat into the register live. Pick a junior; it is the best way to learn.</p></div>
+    <div class="card"><h5>System expert</h5><p>Whoever wrote or knows the rotator. Answers “how does it actually work?”</p></div>
+    <div class="card"><h5>Participants</h5><p>Everyone else. Their job is to ask “what could go wrong?”</p></div>
+  </div>
+
+  <h3>Prep checklist (day before)</h3>
+  <ul class="tasks">
+    <li>Draft the DFD yourself so you are not drawing from zero live (starter below)</li>
+    <li>List the assets: the Okta service account's password (and MFA factor, if any), the 1Password access token the rotator uses, the generated client secrets, the headless browser's session cookies</li>
+    <li>Confirm the setup: headless Playwright on Cloud Run, one dedicated Okta service account, password kept in 1Password</li>
+    <li>Find out who can view the 1Password item and who can run or redeploy the Cloud Run job</li>
+    <li>Prepare a shared threat register (template below)</li>
+    <li>Share the STRIDE cheat sheet in this kit</li>
+  </ul>
+
+  <h3>Ground rules to say out loud</h3>
+  <ul>
+    <li>No idea is stupid. Juniors often spot what seniors assume away.</li>
+    <li>We find threats now; we do not fix them in the room. Note the fix idea and move on.</li>
+    <li>Focus on design, not code bugs.</li>
+    <li>Time-box: if a debate passes 3 minutes, log it as an open question.</li>
+  </ul>
+</section>
+
+<section id="intro">
+  <div class="sec-num">02</div>
+  <h2>What threat modeling is (what to say)</h2>
+  <p class="point">Threat modeling is a structured way to find security problems in a design before attackers find them in production. Say this in the first two minutes; everything else hangs on it.</p>
+  <h4>Script you can read almost word for word</h4>
+  <blockquote><p>“Threat modeling is thinking like an attacker, on purpose, with a checklist. We take a system, draw how data moves through it, and at every step ask: what could go wrong here? Then we decide what to do about each thing we find. It is cheapest to do this at design time: a design flaw found on a whiteboard costs a conversation; found after a breach, it costs an incident.”</p></blockquote>
+
+  <h3>The four questions (the industry-standard core)</h3>
+  <p>Every threat modeling method, including the ones Microsoft and OWASP teach, boils down to four questions from Adam Shostack's framework. Keep them visible all session.</p>
+  <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 240" role="img" aria-label="Four questions drive every threat model; STRIDE answers the second" font-size="13"><defs><marker id="fq-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cds-chart-axis)"></path></marker></defs><text x="24" y="30" font-size="15" font-weight="600" fill="var(--cds-text-primary)">Four questions drive every threat model; STRIDE answers the second</text><text x="24" y="50" font-size="11.5" fill="var(--cds-text-secondary)">Shostack's four-question frame, used by OWASP and Microsoft</text><g fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"><path d="M184 124H208" marker-end="url(#fq-arrow)"></path><path d="M368 124H392" marker-end="url(#fq-arrow)"></path><path d="M552 124H576" marker-end="url(#fq-arrow)"></path><path d="M656 176V212H104V176" marker-end="url(#fq-arrow)"></path></g><g><rect x="24" y="72" width="160" height="104" rx="8" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="40" y="96" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">1 · MODEL</text><text x="40" y="120" font-weight="600" fill="var(--cds-text-primary)">What are we</text><text x="40" y="136" font-weight="600" fill="var(--cds-text-primary)">working on?</text><text x="40" y="160" font-size="11.5" fill="var(--cds-text-secondary)">Draw the DFD</text></g><g><rect x="208" y="72" width="160" height="104" rx="8" fill="var(--cds-chart-categorical-1)" fill-opacity="0.12" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></rect><text x="224" y="96" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">2 · FIND</text><text x="224" y="120" font-weight="600" fill="var(--cds-text-primary)">What can go</text><text x="224" y="136" font-weight="600" fill="var(--cds-text-primary)">wrong?</text><text x="224" y="160" font-size="11.5" fill="var(--cds-text-primary)">Walk STRIDE</text></g><g><rect x="392" y="72" width="160" height="104" rx="8" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="408" y="96" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">3 · RESPOND</text><text x="408" y="120" font-weight="600" fill="var(--cds-text-primary)">What will we</text><text x="408" y="136" font-weight="600" fill="var(--cds-text-primary)">do about it?</text><text x="408" y="160" font-size="11.5" fill="var(--cds-text-secondary)">Mitigate or accept</text></g><g><rect x="576" y="72" width="160" height="104" rx="8" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="592" y="96" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">4 · CHECK</text><text x="592" y="120" font-weight="600" fill="var(--cds-text-primary)">Did we do a</text><text x="592" y="136" font-weight="600" fill="var(--cds-text-primary)">good job?</text><text x="592" y="160" font-size="11.5" fill="var(--cds-text-secondary)">Review coverage</text></g><text x="380" y="204" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">design changes: model again</text></svg><figcaption>The four questions · a loop, not a one-off</figcaption></figure>
+
+  <h3>Why we do it (for juniors)</h3>
+  <ul>
+    <li><strong>Security is a design property.</strong> Scanners and pen tests find bugs; they rarely find “we should not have stored that password at all.”</li>
+    <li><strong>It gives the team a shared picture of the system.</strong> Many juniors have never seen the whole flow end to end.</li>
+    <li><strong>AppSec and auditors ask for it.</strong> It is evidence that risks were considered and accepted on purpose.</li>
+  </ul>
+
+  <h3>Industry standards and methods to name-drop (briefly)</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Name</th><th>What it is</th><th>When people use it</th></tr></thead>
+    <tbody>
+      <tr><td><strong>STRIDE</strong></td><td>Microsoft's 6 threat categories, applied per diagram element</td><td>Most common for software design reviews; what we use today</td></tr>
+      <tr><td>Threat Modeling Manifesto</td><td>Values and principles agreed by practitioners (2020)</td><td>Guidance on mindset, not a method</td></tr>
+      <tr><td>OWASP Threat Modeling Cheat Sheet</td><td>OWASP's practical how-to, built on the 4 questions</td><td>Reference for running sessions</td></tr>
+      <tr><td>PASTA</td><td>7-stage, risk- and business-centric method</td><td>Larger, risk-driven programs</td></tr>
+      <tr><td>LINDDUN</td><td>Like STRIDE, but for privacy threats</td><td>Systems handling personal data</td></tr>
+      <tr><td>DREAD / CVSS</td><td>Ways to score severity</td><td>Rating threats after finding them</td></tr>
+      <tr><td>MITRE ATT&amp;CK</td><td>Catalogue of real attacker techniques</td><td>Mapping threats to real attacks</td></tr>
+    </tbody>
+  </table></div>
+  <p>You only need STRIDE today. Mention the others in one sentence so juniors know they exist.</p>
+
+  <h3>When to threat model</h3>
+  <ul>
+    <li>New system or major feature (this case).</li>
+    <li>A change that touches auth, secrets, trust boundaries, or a new external integration.</li>
+    <li>Whenever the design changes; a threat model is a living document, not a one-time form.</li>
+  </ul>
+</section>
+
+<section id="concepts">
+  <div class="sec-num">03</div>
+  <h2>Core concepts: the vocabulary</h2>
+  <p class="point">You need five words before STRIDE makes sense: asset, data flow diagram, its four element types, and trust boundary.</p>
+  <p><strong>Asset</strong> — something an attacker wants or something we must protect. For the rotator: the Okta service account's password, the token the rotator uses to read 1Password, the newly generated client secrets, and the headless browser's session cookies. The service account itself is an asset too: it has access to the API platform, 1Password and Zendesk.</p>
+  <p><strong>Data flow diagram (DFD)</strong> — a simple picture of the system using only four shapes. Boxes on a whiteboard are fine.</p>
+  <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 288" role="img" aria-label="Four shapes and one dashed line are all a DFD needs" font-size="13"><defs><marker id="dfdk-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cds-chart-axis)"></path></marker></defs><text x="24" y="30" font-size="15" font-weight="600" fill="var(--cds-text-primary)">Four shapes and one dashed line are all a DFD needs</text><text x="24" y="50" font-size="11.5" fill="var(--cds-text-secondary)">Draw these on the whiteboard first, so everyone reads the diagram the same way</text><g><rect x="24" y="64" width="136" height="200" rx="8" fill="none" fill-opacity="1" stroke="var(--cds-chart-grid)" stroke-width="1"></rect><rect x="48" y="84" width="88" height="44" rx="4" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="92" y="164" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">External entity</text><text x="92" y="184" text-anchor="middle" font-size="11.5" fill="var(--cds-text-primary)">Outside our control</text><text x="92" y="216" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">e.g. Okta,</text><text x="92" y="232" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">Zendesk</text></g><g><rect x="168" y="64" width="136" height="200" rx="8" fill="none" fill-opacity="1" stroke="var(--cds-chart-grid)" stroke-width="1"></rect><circle cx="236" cy="106" r="26" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></circle><text x="236" y="164" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Process</text><text x="236" y="184" text-anchor="middle" font-size="11.5" fill="var(--cds-text-primary)">Code we run</text><text x="236" y="216" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">e.g. the Playwright</text><text x="236" y="232" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">rotator</text></g><g><rect x="312" y="64" width="136" height="200" rx="8" fill="none" fill-opacity="1" stroke="var(--cds-chart-grid)" stroke-width="1"></rect><g stroke="var(--cds-chart-axis)" stroke-width="1.25"><line x1="336" x2="424" y1="88" y2="88"></line><line x1="336" x2="424" y1="124" y2="124"></line></g><text x="380" y="164" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Data store</text><text x="380" y="184" text-anchor="middle" font-size="11.5" fill="var(--cds-text-primary)">Data at rest</text><text x="380" y="216" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">e.g. 1Password,</text><text x="380" y="232" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">logs, traces</text></g><g><rect x="456" y="64" width="136" height="200" rx="8" fill="none" fill-opacity="1" stroke="var(--cds-chart-grid)" stroke-width="1"></rect><path d="M480 106H568" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25" marker-end="url(#dfdk-arrow)"></path><text x="524" y="164" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Data flow</text><text x="524" y="184" text-anchor="middle" font-size="11.5" fill="var(--cds-text-primary)">Data moving</text><text x="524" y="216" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">e.g. secret pasted</text><text x="524" y="232" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">into Zendesk</text></g><g><rect x="600" y="64" width="136" height="200" rx="8" fill="var(--cds-chart-categorical-1)" fill-opacity="0.08" stroke="var(--cds-chart-categorical-1)" stroke-width="1.5"></rect><line x1="668" x2="668" y1="80" y2="132" stroke="var(--cds-chart-categorical-1)" stroke-width="2" stroke-dasharray="6 5"></line><path d="M624 106H712" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25" marker-end="url(#dfdk-arrow)"></path><text x="668" y="164" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Trust boundary</text><text x="668" y="184" text-anchor="middle" font-size="11.5" fill="var(--cds-text-primary)">Where trust changes</text><text x="668" y="216" text-anchor="middle" font-size="11.5" fill="var(--cds-text-primary)">Most threats live on</text><text x="668" y="232" text-anchor="middle" font-size="11.5" fill="var(--cds-text-primary)">arrows that cross it</text></g></svg><figcaption>DFD notation · 4 element types + trust boundary</figcaption></figure>
+  <p><strong>Trust boundary</strong> — a dashed line wherever data crosses between zones with different levels of trust: our runtime ↔ internet, our service ↔ a SaaS vendor, a user ↔ our code. Most real threats sit on these lines. Say: <em>“If you remember one thing, check every arrow that crosses a dashed line.”</em></p>
+
+  <h3>Threat vs vulnerability vs risk (juniors mix these up)</h3>
+  <div class="grid2">
+    <div class="card"><h5>Threat</h5><p>Something bad that could happen. “An attacker steals the Okta password.”</p></div>
+    <div class="card"><h5>Vulnerability</h5><p>The weakness that allows it. “The password is visible to anyone with 1Password access.”</p></div>
+    <div class="card"><h5>Risk</h5><p>Likelihood × impact. “Critical: one leak gives access to every platform the bot uses.”</p></div>
+    <div class="card"><h5>Mitigation / control</h5><p>What reduces the risk. “Limit who can view the item and alert on logins from outside Cloud Run.”</p></div>
+  </div>
+</section>
+
+<section id="stride">
+  <div class="sec-num">04</div>
+  <h2>STRIDE, letter by letter</h2>
+  <p class="point">STRIDE is six categories of threat, each the opposite of a security property you want. Walk them one at a time across the diagram.</p>
+  <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 516" role="img" aria-label="STRIDE: six threats, each the opposite of a security property" font-size="11.5"><text x="24" y="30" font-size="15" font-weight="600" fill="var(--cds-text-primary)">STRIDE: six threats, each the opposite of a security property</text><text x="24" y="50" fill="var(--cds-text-secondary)">Definition, an example from the secret rotator, and the usual fix</text><g><g><rect x="24" y="64" width="348" height="132" rx="8" fill="none" stroke="var(--cds-chart-grid)" stroke-width="1"></rect><rect x="24" y="64" width="4" height="132" rx="2" fill="var(--cds-chart-categorical-1)"></rect><circle cx="58" cy="98" r="18" fill="var(--cds-chart-categorical-1)" fill-opacity="0.15" stroke="var(--cds-chart-categorical-1)" stroke-width="1.5"></circle></g><text x="58" y="103" text-anchor="middle" font-size="15" font-weight="600" fill="var(--cds-text-primary)">S</text><text x="88" y="94" font-size="13" font-weight="600" fill="var(--cds-text-primary)">Spoofing</text><text x="88" y="111" fill="var(--cds-text-secondary)">violates Authentication</text><text x="40" y="140" fill="var(--cds-text-primary)">Pretending to be someone or something else</text><text x="40" y="160" fill="var(--cds-text-primary)">Rotator: a 1Password viewer logs in as the bot</text><text x="40" y="180" fill="var(--cds-text-secondary)">Fix: limit who can view it, MFA, login alerts</text></g><g><g><rect x="388" y="64" width="348" height="132" rx="8" fill="none" stroke="var(--cds-chart-grid)" stroke-width="1"></rect><rect x="388" y="64" width="4" height="132" rx="2" fill="var(--cds-chart-categorical-2)"></rect><circle cx="422" cy="98" r="18" fill="var(--cds-chart-categorical-2)" fill-opacity="0.15" stroke="var(--cds-chart-categorical-2)" stroke-width="1.5"></circle></g><text x="422" y="103" text-anchor="middle" font-size="15" font-weight="600" fill="var(--cds-text-primary)">T</text><text x="452" y="94" font-size="13" font-weight="600" fill="var(--cds-text-primary)">Tampering</text><text x="452" y="111" fill="var(--cds-text-secondary)">violates Integrity</text><text x="404" y="140" fill="var(--cds-text-primary)">Changing data or code without permission</text><text x="404" y="160" fill="var(--cds-text-primary)">Rotator: a poisoned npm package leaks secrets</text><text x="404" y="180" fill="var(--cds-text-secondary)">Fix: code review, signing, pinned dependencies</text></g><g><g><rect x="24" y="212" width="348" height="132" rx="8" fill="none" stroke="var(--cds-chart-grid)" stroke-width="1"></rect><rect x="24" y="212" width="4" height="132" rx="2" fill="var(--cds-chart-categorical-3)"></rect><circle cx="58" cy="246" r="18" fill="var(--cds-chart-categorical-3)" fill-opacity="0.15" stroke="var(--cds-chart-categorical-3)" stroke-width="1.5"></circle></g><text x="58" y="251" text-anchor="middle" font-size="15" font-weight="600" fill="var(--cds-text-primary)">R</text><text x="88" y="242" font-size="13" font-weight="600" fill="var(--cds-text-primary)">Repudiation</text><text x="88" y="259" fill="var(--cds-text-secondary)">violates Non-repudiation</text><text x="40" y="288" fill="var(--cds-text-primary)">Doing something and being able to deny it</text><text x="40" y="308" fill="var(--cds-text-primary)">Rotator: a person using the bot login looks like it</text><text x="40" y="328" fill="var(--cds-text-secondary)">Fix: audit logs, one account per actor</text></g><g><g><rect x="388" y="212" width="348" height="132" rx="8" fill="none" stroke="var(--cds-chart-grid)" stroke-width="1"></rect><rect x="388" y="212" width="4" height="132" rx="2" fill="var(--cds-chart-categorical-4)"></rect><circle cx="422" cy="246" r="18" fill="var(--cds-chart-categorical-4)" fill-opacity="0.15" stroke="var(--cds-chart-categorical-4)" stroke-width="1.5"></circle></g><text x="422" y="251" text-anchor="middle" font-size="15" font-weight="600" fill="var(--cds-text-primary)">I</text><text x="452" y="242" font-size="13" font-weight="600" fill="var(--cds-text-primary)">Information disclosure</text><text x="452" y="259" fill="var(--cds-text-secondary)">violates Confidentiality</text><text x="404" y="288" fill="var(--cds-text-primary)">Exposing data to someone who should not see it</text><text x="404" y="308" fill="var(--cds-text-primary)">Rotator: the secret lands in a Playwright trace</text><text x="404" y="328" fill="var(--cds-text-secondary)">Fix: secret manager, redaction, encryption</text></g><g><g><rect x="24" y="360" width="348" height="132" rx="8" fill="none" stroke="var(--cds-chart-grid)" stroke-width="1"></rect><rect x="24" y="360" width="4" height="132" rx="2" fill="var(--cds-chart-categorical-5)"></rect><circle cx="58" cy="394" r="18" fill="var(--cds-chart-categorical-5)" fill-opacity="0.15" stroke="var(--cds-chart-categorical-5)" stroke-width="1.5"></circle></g><text x="58" y="399" text-anchor="middle" font-size="15" font-weight="600" fill="var(--cds-text-primary)">D</text><text x="88" y="390" font-size="13" font-weight="600" fill="var(--cds-text-primary)">Denial of service</text><text x="88" y="407" fill="var(--cds-text-secondary)">violates Availability</text><text x="40" y="436" fill="var(--cds-text-primary)">Making the system slow or unusable</text><text x="40" y="456" fill="var(--cds-text-primary)">Rotator: a UI change breaks rotation halfway</text><text x="40" y="476" fill="var(--cds-text-secondary)">Fix: timeouts, alerts, verify before revoking</text></g><g><g><rect x="388" y="360" width="348" height="132" rx="8" fill="none" stroke="var(--cds-chart-grid)" stroke-width="1"></rect><rect x="388" y="360" width="4" height="132" rx="2" fill="var(--cds-chart-categorical-6)"></rect><circle cx="422" cy="394" r="18" fill="var(--cds-chart-categorical-6)" fill-opacity="0.15" stroke="var(--cds-chart-categorical-6)" stroke-width="1.5"></circle></g><text x="422" y="399" text-anchor="middle" font-size="15" font-weight="600" fill="var(--cds-text-primary)">E</text><text x="452" y="390" font-size="13" font-weight="600" fill="var(--cds-text-primary)">Elevation of privilege</text><text x="452" y="407" fill="var(--cds-text-secondary)">violates Authorization</text><text x="404" y="436" fill="var(--cds-text-primary)">Gaining more rights than you should have</text><text x="404" y="456" fill="var(--cds-text-primary)">Rotator: the service account is a Zendesk admin</text><text x="404" y="476" fill="var(--cds-text-secondary)">Fix: least privilege, scoped roles</text></g></svg><figcaption>STRIDE cheat sheet · 6 threat categories</figcaption></figure>
+
+  <h3>Which letters apply to which element</h3>
+  <p>The classic “STRIDE-per-element” rule. It saves time by telling you which questions to ask where.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Element</th><th class="c">S</th><th class="c">T</th><th class="c">R</th><th class="c">I</th><th class="c">D</th><th class="c">E</th></tr></thead>
+    <tbody>
+      <tr><td>External entity</td><td class="c check">✓</td><td></td><td class="c check">✓</td><td></td><td></td><td></td></tr>
+      <tr><td>Process</td><td class="c check">✓</td><td class="c check">✓</td><td class="c check">✓</td><td class="c check">✓</td><td class="c check">✓</td><td class="c check">✓</td></tr>
+      <tr><td>Data store</td><td></td><td class="c check">✓</td><td class="c check">✓*</td><td class="c check">✓</td><td class="c check">✓</td><td></td></tr>
+      <tr><td>Data flow</td><td></td><td class="c check">✓</td><td></td><td class="c check">✓</td><td class="c check">✓</td><td></td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:14px;color:var(--ink-3)">* Repudiation applies to data stores that hold logs.</p>
+
+  <h3>What to say for each letter</h3>
+  <div class="say"><span class="L S">S</span><p><strong>Spoofing.</strong> <q>Can someone act as our rotator, or trick it into talking to a fake service?</q> Example: anyone who can view the bot's password in 1Password can log into Okta as the bot, and every platform will believe it is the rotator.</p></div>
+  <div class="say"><span class="L T">T</span><p><strong>Tampering.</strong> <q>Can someone change something in transit or at rest that we trust?</q> Example: someone edits the Playwright script or its npm dependencies, so it also sends the new secret to an attacker's server.</p></div>
+  <div class="say"><span class="L R">R</span><p><strong>Repudiation.</strong> <q>If a secret got rotated wrongly at 2 a.m., could we prove whether the rotator did it or a person did?</q> Example: a dedicated account helps, but a human who copied the password from 1Password looks exactly like the bot in Okta and Zendesk logs.</p></div>
+  <div class="say"><span class="L I">I</span><p><strong>Information disclosure.</strong> <q>Where could a secret leak?</q> The biggest letter for this app. Examples: the new secret printed in Cloud Run logs, captured in a Playwright screenshot, video or trace, or the 1Password access token sitting in a plain Cloud Run environment variable.</p></div>
+  <div class="say"><span class="L D">D</span><p><strong>Denial of service.</strong> <q>What stops rotation from working, and what happens then?</q> Example: Okta changes its login page, the selector breaks, the old secret is already revoked, and the integration goes down. Half-finished rotation is a real outage risk.</p></div>
+  <div class="say"><span class="L E">E</span><p><strong>Elevation of privilege.</strong> <q>Does the service account have more power than it needs?</q> Example: it was made only for rotation, but if it is an admin in the API platform or Zendesk, stealing it gives an attacker full admin, not just rotation.</p></div>
+
+  <h3>“Spoofing doesn't apply to us, right?” (it does)</h3>
+  <div class="callout warn">
+    <span class="label">Expect this question</span>
+    <p>A dedicated service account running headless on Cloud Run does not remove spoofing. It changes <strong>who</strong> could spoof and <strong>how</strong>. Spoofing asks whether anyone can pretend to be a trusted identity, and this design has three of them.</p>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Identity someone could pretend to be</th><th>How, in your design</th><th>Likelihood</th></tr></thead>
+    <tbody>
+      <tr><td>The Okta service account</td><td>Anyone who can view the 1Password item can log in as the bot from their own laptop</td><td><span class="pill crit">High</span> people can view it</td></tr>
+      <tr><td>The rotator's GCP identity</td><td>Anyone with permission to run, redeploy or impersonate the Cloud Run job's service account acts as the rotator</td><td><span class="pill med">Medium</span> depends on IAM</td></tr>
+      <tr><td>Okta / the platforms, to the rotator</td><td>A changed URL in config sends the bot's password to a look-alike page</td><td><span class="pill low">Low</span> fixed URLs, TLS, headless</td></tr>
+    </tbody>
+  </table></div>
+  <p>What “headless” and “dedicated” actually buy you: no human reads a phishing page (lowers the third row), and logs name one account instead of a shared one (helps Repudiation). They do nothing about the first two rows.</p>
+  <div class="callout"><span class="label">General rule to teach</span><p>Never skip a letter silently. If a category truly does not apply to an element, write <em>N/A</em> in the register with one line of reasoning. “Considered and not applicable because…” is a valid result, and AppSec reviewers look for it.</p></div>
+</section>
+
+<section id="exercise">
+  <div class="sec-num">05</div>
+  <h2>Running the exercise</h2>
+  <p class="point">Run STRIDE as a guided game: point at one element or arrow on the diagram, read the questions for one letter, and let the group call out threats while the scribe logs them.</p>
+
+  <h3>Facilitation steps</h3>
+  <ol class="steps">
+    <li><strong>Draw the DFD with the group</strong> (10 min). Ask the system expert to narrate the flow; you draw. Ask: “What did I miss? Where does this run? Where is the password stored?”</li>
+    <li><strong>Mark trust boundaries</strong> (2 min). Ask: “Where does trust change?” Let juniors try first.</li>
+    <li><strong>Number every element and flow</strong> (1 min). E.g. P1 rotator, DS1 1Password, F1–F6 flows. Threats are logged against these IDs.</li>
+    <li><strong>Pick the riskiest area first.</strong> For this app: the flows that carry secrets across boundaries.</li>
+    <li><strong>For each letter, ~7 minutes:</strong> read the definition, point at the relevant elements, ask 2–3 questions from the bank below, then go round the room.</li>
+    <li><strong>Log every threat in one sentence</strong> using this pattern:<span class="pattern">An [attacker / failure] could [action] on [element] because [weakness], resulting in [impact].</span></li>
+    <li><strong>Park debates.</strong> Anything over 3 minutes becomes an open question with an owner.</li>
+    <li><strong>Rate and propose a mitigation</strong> after all six letters, not during.</li>
+  </ol>
+
+  <h3>Techniques that work with juniors</h3>
+  <div class="grid2">
+    <div class="card"><h5>Silent brainstorm first</h5><p>2 minutes of sticky notes per letter before anyone talks. Stops the loudest person dominating.</p></div>
+    <div class="card"><h5>“Be the attacker” role</h5><p>Give one junior the explicit job of attacker each round.</p></div>
+    <div class="card"><h5>Elevation of Privilege cards</h5><p>Microsoft's free card deck turns STRIDE into a game. Good for a second session.</p></div>
+    <div class="card"><h5>Praise thoughtful wrong answers</h5><p>The goal is to build the habit, not to be complete on day one.</p></div>
+  </div>
+
+  <h3>Question bank by letter</h3>
+  <div class="qbank">
+    <div class="card" style="--c:var(--cds-chart-categorical-1)"><h5><span class="L S">S</span> Spoofing</h5><ul>
+      <li>Who can view the bot's password in 1Password today? Could any of them log in as the bot?</li>
+      <li>Does Okta enforce MFA or a network restriction for this service account, or is the password alone enough?</li>
+      <li>Who can run, redeploy or impersonate the Cloud Run job's GCP service account?</li>
+      <li>Does the script check it is on the real Okta domain before typing the password?</li></ul></div>
+    <div class="card" style="--c:var(--cds-chart-categorical-2)"><h5><span class="L T">T</span> Tampering</h5><ul>
+      <li>Who can change the script, its config, or the target client ID? Is that change reviewed?</li>
+      <li>Are npm / Playwright dependencies pinned and scanned? What if one is compromised?</li>
+      <li>Could the wrong secret be pasted into the wrong client ID? How do we verify?</li>
+      <li>Is the container image immutable, or can someone edit it in place?</li></ul></div>
+    <div class="card" style="--c:var(--cds-chart-categorical-3)"><h5><span class="L R">R</span> Repudiation</h5><ul>
+      <li>Do we log each rotation: when, which client ID, success or failure, which Cloud Run execution?</li>
+      <li>If a human logs in with the bot's password, can we tell it apart from the rotator (source IP, device, time)?</li>
+      <li>Does 1Password's activity log show who revealed the password, and when?</li>
+      <li>Can someone delete or edit the Cloud Run or rotation logs?</li></ul></div>
+    <div class="card" style="--c:var(--cds-chart-categorical-4)"><h5><span class="L I">I</span> Information disclosure</h5><ul>
+      <li>Where does the new secret exist, even briefly? Browser memory, DOM, screenshot, video, trace, Cloud Run logs, stdout?</li>
+      <li>Are Playwright traces or failure screenshots on? Where are they stored and who can read them?</li>
+      <li>How does the rotator authenticate to 1Password, and where is that token kept?</li>
+      <li>Who can view the 1Password item, and is that list reviewed?</li>
+      <li>Would an error message print the secret?</li></ul></div>
+    <div class="card" style="--c:var(--cds-chart-categorical-5)"><h5><span class="L D">D</span> Denial of service</h5><ul>
+      <li>What happens if a UI changes and a selector breaks halfway through?</li>
+      <li>Is the old secret revoked before the new one is confirmed working? Can we roll back?</li>
+      <li>What if Okta locks the bot account after failed logins, or MFA prompts change?</li>
+      <li>Who gets alerted when a rotation fails, and how fast?</li></ul></div>
+    <div class="card" style="--c:var(--cds-chart-categorical-6)"><h5><span class="L E">E</span> Elevation of privilege</h5><ul>
+      <li>What role does the service account have in the API platform, 1Password and Zendesk? Only what rotation needs?</li>
+      <li>Can the 1Password token read only the one item it needs, or the whole vault?</li>
+      <li>If the service account is compromised, what else can the attacker reach?</li>
+      <li>Does the Cloud Run job's GCP service account have broader access than needed?</li></ul></div>
+  </div>
+</section>
+
+<section id="rotator">
+  <div class="sec-num">06</div>
+  <h2>Applying it to the secret rotator</h2>
+  <p class="point">Use this as your pre-drawn starting diagram, then let the group correct it.</p>
+  <p>It reflects the confirmed design: headless Playwright on Cloud Run, one dedicated Okta service account, and that account's password stored in 1Password. How the rotator reads 1Password is still an assumption; confirm it before the session.</p>
+  <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 460" role="img" aria-label="The new secret crosses the trust boundary on F4 and F5" font-size="13"><defs><marker id="dfd-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cds-chart-axis)"></path></marker><marker id="dfd-arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cds-chart-categorical-1)"></path></marker></defs><text x="24" y="30" font-size="15" font-weight="600" fill="var(--cds-text-primary)">The new secret crosses the trust boundary on F4 and F5</text><text x="24" y="50" font-size="11.5" fill="var(--cds-text-secondary)">Secret rotator data flow diagram. Dashed boxes are trust boundaries; 1Password is SaaS too.</text><g><rect x="24" y="68" width="316" height="368" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25" stroke-dasharray="6 5"></rect><text x="40" y="92" font-weight="600" fill="var(--cds-text-primary)">Cloud Run (GCP)</text></g><g><rect x="420" y="68" width="316" height="368" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25" stroke-dasharray="6 5"></rect><text x="436" y="92" font-weight="600" fill="var(--cds-text-primary)">SaaS vendors (internet)</text></g><g><rect x="82" y="108" width="200" height="48" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="182" y="136" text-anchor="middle" fill="var(--cds-text-primary)">E1 Cloud Scheduler</text></g><g><circle cx="182" cy="244" r="60" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></circle><text x="182" y="242" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">P1 Rotator</text><text x="182" y="260" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">Playwright script</text></g><g><rect x="32" y="334" width="150" height="66" rx="6" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25" stroke-dasharray="6 5"></rect><g stroke="var(--cds-chart-axis)" stroke-width="1.25"><line x1="40" x2="170" y1="344" y2="344"></line><line x1="40" x2="170" y1="392" y2="392"></line></g><text x="48" y="366" fill="var(--cds-text-primary)">DS1 1Password</text><text x="48" y="384" font-size="11.5" fill="var(--cds-text-secondary)">bot's Okta password</text></g><g><g stroke="var(--cds-chart-axis)" stroke-width="1.25"><line x1="194" x2="324" y1="344" y2="344"></line><line x1="194" x2="324" y1="392" y2="392"></line></g><text x="202" y="366" fill="var(--cds-text-primary)">DS2 Logs, traces</text><text x="202" y="384" font-size="11.5" fill="var(--cds-text-secondary)">screenshots, video</text></g><g><rect x="470" y="112" width="216" height="56" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="486" y="136" font-weight="600" fill="var(--cds-text-primary)">E2 Okta</text><text x="486" y="154" font-size="11.5" fill="var(--cds-text-secondary)">SSO for both platforms</text></g><g><rect x="470" y="216" width="216" height="56" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="486" y="240" font-weight="600" fill="var(--cds-text-primary)">E3 API platform</text><text x="486" y="258" font-size="11.5" fill="var(--cds-text-secondary)">creates the new secret</text></g><g><rect x="470" y="332" width="216" height="56" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="486" y="356" font-weight="600" fill="var(--cds-text-primary)">E4 Zendesk</text><text x="486" y="374" font-size="11.5" fill="var(--cds-text-secondary)">AP integrations, client ID</text></g><g fill="none" stroke-width="1.25"><path d="M182 156V184" stroke="var(--cds-chart-axis)" marker-end="url(#dfd-arrow)"></path><path d="M105 344L137 286" stroke="var(--cds-chart-axis)" marker-end="url(#dfd-arrow)"></path><path d="M227 284L259 344" stroke="var(--cds-chart-axis)" marker-end="url(#dfd-arrow)"></path><path d="M234 214L470 140" stroke="var(--cds-chart-axis)" marker-start="url(#dfd-arrow)" marker-end="url(#dfd-arrow)"></path><path d="M242 244H470" stroke="var(--cds-chart-categorical-1)" stroke-width="2" marker-start="url(#dfd-arrow-accent)" marker-end="url(#dfd-arrow-accent)"></path><path d="M234 274L470 360" stroke="var(--cds-chart-categorical-1)" stroke-width="2" marker-end="url(#dfd-arrow-accent)"></path></g><text x="192" y="175" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">F1</text><text x="110" y="318" text-anchor="end" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">F2</text><text x="256" y="318" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">F6</text><text x="380" y="158" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">F3</text><text x="380" y="234" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">F4</text><text x="394" y="316" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">F5</text></svg><figcaption>Secret rotator DFD · 4 external entities, 1 process, 2 stores, 6 flows</figcaption></figure>
+  <p>The highlighted flows carry the new secret: it comes back from the API platform (F4) and is entered into Zendesk (F5). Start STRIDE there, then do F2, because the bot's whole identity is one password in 1Password.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Flow</th><th>From → To</th><th>Data carried</th><th>Crosses boundary?</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">F1</td><td>Cloud Scheduler → Rotator</td><td>Start signal, which client to rotate</td><td>No</td></tr>
+      <tr><td class="mono">F2</td><td>1Password → Rotator</td><td>The Okta service account's password (via a 1Password access token)</td><td><strong>Yes</strong> · 1Password is SaaS</td></tr>
+      <tr><td class="mono">F3</td><td>Rotator ⇄ Okta</td><td>Password, MFA code if any, session cookie (happens twice)</td><td><strong>Yes</strong></td></tr>
+      <tr><td class="mono">F4</td><td>Rotator ⇄ API platform</td><td>Create-secret request; new secret value back</td><td><strong>Yes</strong></td></tr>
+      <tr><td class="mono">F5</td><td>Rotator → Zendesk</td><td>New secret entered into the integration for the client ID</td><td><strong>Yes</strong></td></tr>
+      <tr><td class="mono">F6</td><td>Rotator → Logs/traces</td><td>Cloud Run logs, screenshots, videos, Playwright traces</td><td>No</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Worked example: what a finished STRIDE pass looks like</h3>
+  <div class="callout"><span class="label">Answer key</span><p>Show this only after the group has tried on its own. It is the answer key, not the starting point.</p></div>
+  <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 496" role="img" aria-label="Nine threats pinned to the rotator diagram" font-size="13"><defs><marker id="tm-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cds-chart-axis)"></path></marker></defs><text x="24" y="30" font-size="15" font-weight="600" fill="var(--cds-text-primary)">Nine threats pinned to the rotator diagram</text><text x="24" y="50" font-size="11.5" fill="var(--cds-text-secondary)">Dashed boxes are trust boundaries (1Password is SaaS too). Badge colour = STRIDE category.</text><g><rect x="24" y="68" width="316" height="368" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25" stroke-dasharray="6 5"></rect><text x="40" y="92" font-weight="600" fill="var(--cds-text-primary)">Cloud Run (GCP)</text></g><g><rect x="420" y="68" width="316" height="368" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25" stroke-dasharray="6 5"></rect><text x="436" y="92" font-weight="600" fill="var(--cds-text-primary)">SaaS vendors (internet)</text></g><g><rect x="82" y="108" width="200" height="48" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="182" y="136" text-anchor="middle" fill="var(--cds-text-primary)">Cloud Scheduler</text></g><g><circle cx="182" cy="244" r="60" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></circle><text x="182" y="242" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Rotator</text><text x="182" y="260" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">Playwright script</text></g><g><rect x="32" y="334" width="150" height="66" rx="6" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25" stroke-dasharray="6 5"></rect><g stroke="var(--cds-chart-axis)" stroke-width="1.25"><line x1="40" x2="170" y1="344" y2="344"></line><line x1="40" x2="170" y1="392" y2="392"></line></g><text x="48" y="366" fill="var(--cds-text-primary)">1Password</text><text x="48" y="384" font-size="11.5" fill="var(--cds-text-secondary)">bot's Okta password</text></g><g><g stroke="var(--cds-chart-axis)" stroke-width="1.25"><line x1="194" x2="324" y1="344" y2="344"></line><line x1="194" x2="324" y1="392" y2="392"></line></g><text x="202" y="366" fill="var(--cds-text-primary)">Logs, traces</text><text x="202" y="384" font-size="11.5" fill="var(--cds-text-secondary)">screenshots, video</text></g><g><rect x="470" y="112" width="216" height="56" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="486" y="136" font-weight="600" fill="var(--cds-text-primary)">Okta</text><text x="486" y="154" font-size="11.5" fill="var(--cds-text-secondary)">SSO for both platforms</text></g><g><rect x="470" y="216" width="216" height="56" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="486" y="240" font-weight="600" fill="var(--cds-text-primary)">API platform</text><text x="486" y="258" font-size="11.5" fill="var(--cds-text-secondary)">creates the new secret</text></g><g><rect x="470" y="332" width="216" height="56" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="486" y="356" font-weight="600" fill="var(--cds-text-primary)">Zendesk</text><text x="486" y="374" font-size="11.5" fill="var(--cds-text-secondary)">AP integrations, client ID</text></g><g fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"><path d="M182 156V184" marker-end="url(#tm-arrow)"></path><path d="M105 344L137 286" marker-end="url(#tm-arrow)"></path><path d="M227 284L259 344" marker-end="url(#tm-arrow)"></path><path d="M234 214L470 140" marker-start="url(#tm-arrow)" marker-end="url(#tm-arrow)"></path><path d="M242 244H470" marker-start="url(#tm-arrow)" marker-end="url(#tm-arrow)"></path><path d="M234 274L470 360" marker-end="url(#tm-arrow)"></path></g><g><circle cx="310" cy="324" r="14" fill="var(--cds-chart-categorical-4)" fill-opacity="0.35" stroke="var(--cds-chart-categorical-4)" stroke-width="2"></circle><text x="310" y="328" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T1</text></g><g><circle cx="662" cy="244" r="14" fill="var(--cds-chart-categorical-6)" fill-opacity="0.35" stroke="var(--cds-chart-categorical-6)" stroke-width="2"></circle><text x="662" y="248" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T2</text></g><g><circle cx="452" cy="316" r="14" fill="var(--cds-chart-categorical-5)" fill-opacity="0.35" stroke="var(--cds-chart-categorical-5)" stroke-width="2"></circle><text x="452" y="320" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T3</text></g><g><circle cx="156" cy="314" r="14" fill="var(--cds-chart-categorical-1)" fill-opacity="0.35" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></circle><text x="156" y="318" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T4</text></g><g><circle cx="248" cy="180" r="14" fill="var(--cds-chart-categorical-2)" fill-opacity="0.35" stroke="var(--cds-chart-categorical-2)" stroke-width="2"></circle><text x="248" y="184" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T5</text></g><g><circle cx="282" cy="132" r="14" fill="var(--cds-chart-categorical-3)" fill-opacity="0.35" stroke="var(--cds-chart-categorical-3)" stroke-width="2"></circle><text x="282" y="136" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T6</text></g><g><circle cx="60" cy="314" r="14" fill="var(--cds-chart-categorical-4)" fill-opacity="0.35" stroke="var(--cds-chart-categorical-4)" stroke-width="2"></circle><text x="60" y="318" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T7</text></g><g><circle cx="330" cy="158" r="14" fill="var(--cds-chart-categorical-1)" fill-opacity="0.35" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></circle><text x="330" y="162" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T8</text></g><g><circle cx="98" cy="244" r="14" fill="var(--cds-chart-categorical-1)" fill-opacity="0.35" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></circle><text x="98" y="248" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T9</text></g><g><circle cx="32" cy="470" r="6" fill="var(--cds-chart-categorical-1)" fill-opacity="0.4" stroke="var(--cds-chart-categorical-1)" stroke-width="1.5"></circle><circle cx="152" cy="470" r="6" fill="var(--cds-chart-categorical-2)" fill-opacity="0.4" stroke="var(--cds-chart-categorical-2)" stroke-width="1.5"></circle><circle cx="272" cy="470" r="6" fill="var(--cds-chart-categorical-3)" fill-opacity="0.4" stroke="var(--cds-chart-categorical-3)" stroke-width="1.5"></circle><circle cx="402" cy="470" r="6" fill="var(--cds-chart-categorical-4)" fill-opacity="0.4" stroke="var(--cds-chart-categorical-4)" stroke-width="1.5"></circle><circle cx="522" cy="470" r="6" fill="var(--cds-chart-categorical-5)" fill-opacity="0.4" stroke="var(--cds-chart-categorical-5)" stroke-width="1.5"></circle><circle cx="642" cy="470" r="6" fill="var(--cds-chart-categorical-6)" fill-opacity="0.4" stroke="var(--cds-chart-categorical-6)" stroke-width="1.5"></circle><text x="44" y="474" font-size="11.5" fill="var(--cds-text-primary)">Spoofing</text><text x="164" y="474" font-size="11.5" fill="var(--cds-text-primary)">Tampering</text><text x="284" y="474" font-size="11.5" fill="var(--cds-text-primary)">Repudiation</text><text x="414" y="474" font-size="11.5" fill="var(--cds-text-primary)">Info disclosure</text><text x="534" y="474" font-size="11.5" fill="var(--cds-text-primary)">Denial of service</text><text x="654" y="474" font-size="11.5" fill="var(--cds-text-primary)">Elevation</text></g></svg><figcaption>Worked example · 9 threats pinned to the DFD</figcaption></figure>
+  <div class="table-wrap"><table>
+    <thead><tr><th>ID</th><th></th><th>Where</th><th>Threat statement</th><th>Risk</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">T1</td><td><span class="L I">I</span></td><td>Logs, traces</td><td>Playwright traces or failure screenshots capture the new secret on screen, and anyone with access to those files can read it</td><td><span class="pill crit">Critical</span></td><td>Turn off tracing and screenshots on secret pages; mask the field; restrict and expire the storage</td></tr>
+      <tr><td class="mono">T4</td><td><span class="L S">S</span></td><td>1Password</td><td>Anyone who can view the bot's password in 1Password can log into Okta as the bot from their own machine</td><td><span class="pill crit">Critical</span></td><td>Limit viewers to break-glass owners; enforce MFA or a network zone in Okta; alert on logins from outside Cloud Run</td></tr>
+      <tr><td class="mono">T2</td><td><span class="L E">E</span></td><td>API platform, Zendesk</td><td>The service account holds admin roles, so stealing it gives full admin, not just rotation</td><td><span class="pill high">High</span></td><td>Custom role limited to client-secret management in each platform</td></tr>
+      <tr><td class="mono">T3</td><td><span class="L D">D</span></td><td>F4 to F5</td><td>The script breaks after creating the new secret but before entering it in Zendesk, and the old one is revoked, so the integration goes down</td><td><span class="pill high">High</span></td><td>Order: create, update Zendesk, verify a test call, then revoke old; alert on any failed run</td></tr>
+      <tr><td class="mono">T7</td><td><span class="L I">I</span></td><td>1Password token</td><td>The token the rotator uses to read 1Password sits in a plain Cloud Run environment variable, visible to anyone who can view the service config</td><td><span class="pill high">High</span></td><td>Store it in GCP Secret Manager; scope the token to one vault item, read-only</td></tr>
+      <tr><td class="mono">T9</td><td><span class="L S">S</span></td><td>Cloud Run job</td><td>Anyone with permission to run, redeploy or act as the job's GCP service account can run their own code as the rotator</td><td><span class="pill med">Medium</span></td><td>Restrict run, deploy and actAs permissions; deploy only from CI with reviewed images</td></tr>
+      <tr><td class="mono">T6</td><td><span class="L R">R</span></td><td>Okta, Zendesk logs</td><td>A person using the bot's password looks identical to the rotator in audit logs</td><td><span class="pill med">Medium</span></td><td>Use 1Password reveal logs plus Okta source IP; log run ID, client ID, time and result for every rotation</td></tr>
+      <tr><td class="mono">T5</td><td><span class="L T">T</span></td><td>Rotator</td><td>A compromised npm package in the Playwright project sends secrets to an outside server</td><td><span class="pill med">Medium</span></td><td>Lockfile and pinned versions; dependency scanning; restrict egress to the four domains</td></tr>
+      <tr><td class="mono">T8</td><td><span class="L S">S</span></td><td>Okta login (F3)</td><td>A changed URL in config sends the bot's password to a look-alike Okta page</td><td><span class="pill low">Low</span></td><td>Hard-code and assert the exact Okta domain before typing</td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:14px;color:var(--ink-3)">Sorted by risk. IDs stay stable so they match the diagram and tickets even when the order changes.</p>
+
+  <h3>How one threat travels from question to ticket</h3>
+  <p>Walk the group through this for T1.</p>
+  <ol class="steps">
+    <li><strong>Question asked:</strong> “Where does the secret exist, even for a second?”</li>
+    <li><strong>Answer from the room:</strong> “On screen, so in any screenshot or trace.”</li>
+    <li><strong>Threat statement:</strong> “An insider with storage access could read the new secret from a failure trace, because tracing records the page, resulting in a leaked production credential.”</li>
+    <li><strong>Rating:</strong> likelihood High (traces are often on for debugging), impact High → <span class="pill crit">Critical</span></li>
+    <li><strong>Response:</strong> Mitigate. Ticket: “Disable Playwright tracing on secret pages and mask the secret field.”</li>
+    <li><strong>Check:</strong> rerun a failed rotation and confirm no secret appears in the artifacts.</li>
+  </ol>
+
+  <h3>Questions to settle before the session</h3>
+  <ul>
+    <li>How does the rotator read the password from 1Password: a 1Password service-account token, Connect server, or something else? Where is that token stored?</li>
+    <li>Does Okta require MFA or a network restriction for the service account? If not, the password alone is the bot's identity.</li>
+    <li>Exactly who can view the 1Password item, and is reveal activity logged?</li>
+    <li>Is the old secret revoked automatically, and when?</li>
+    <li>Are the newly rotated client secrets also saved to 1Password, or only entered into Zendesk?</li>
+    <li>Do the API platform or Zendesk offer an API for this? If yes, browser automation may be the wrong design.</li>
+  </ul>
+</section>
+
+<section id="risk">
+  <div class="sec-num">07</div>
+  <h2>Rating risks and choosing mitigations</h2>
+  <p class="point">Keep scoring simple for a junior group: likelihood × impact on a 3-point scale. DREAD and CVSS exist, but they slow a first session down.</p>
+  <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 368" role="img" aria-label="Rate each threat as likelihood times impact" font-size="13"><text x="24" y="30" font-size="15" font-weight="600" fill="var(--cds-text-primary)">Rate each threat as likelihood times impact</text><text x="24" y="50" font-size="11.5" fill="var(--cds-text-secondary)">The five highest risks from the worked example, placed on the grid</text><g><rect x="162" y="74" width="176" height="72" rx="6" fill="var(--cds-chart-status-warning)" fill-opacity="0.18" stroke="var(--cds-chart-status-warning)" stroke-opacity="0.5" stroke-width="1"></rect><rect x="342" y="74" width="176" height="72" rx="6" fill="var(--cds-chart-status-critical)" fill-opacity="0.18" stroke="var(--cds-chart-status-critical)" stroke-opacity="0.5" stroke-width="1"></rect><rect x="522" y="74" width="176" height="72" rx="6" fill="var(--cds-chart-status-critical)" fill-opacity="0.42" stroke="var(--cds-chart-status-critical)" stroke-opacity="0.5" stroke-width="1"></rect><rect x="162" y="150" width="176" height="72" rx="6" fill="var(--cds-chart-status-good)" fill-opacity="0.15" stroke="var(--cds-chart-status-good)" stroke-opacity="0.5" stroke-width="1"></rect><rect x="342" y="150" width="176" height="72" rx="6" fill="var(--cds-chart-status-warning)" fill-opacity="0.18" stroke="var(--cds-chart-status-warning)" stroke-opacity="0.5" stroke-width="1"></rect><rect x="522" y="150" width="176" height="72" rx="6" fill="var(--cds-chart-status-critical)" fill-opacity="0.18" stroke="var(--cds-chart-status-critical)" stroke-opacity="0.5" stroke-width="1"></rect><rect x="162" y="226" width="176" height="72" rx="6" fill="var(--cds-chart-status-good)" fill-opacity="0.15" stroke="var(--cds-chart-status-good)" stroke-opacity="0.5" stroke-width="1"></rect><rect x="342" y="226" width="176" height="72" rx="6" fill="var(--cds-chart-status-good)" fill-opacity="0.15" stroke="var(--cds-chart-status-good)" stroke-opacity="0.5" stroke-width="1"></rect><rect x="522" y="226" width="176" height="72" rx="6" fill="var(--cds-chart-status-warning)" fill-opacity="0.18" stroke="var(--cds-chart-status-warning)" stroke-opacity="0.5" stroke-width="1"></rect></g><text x="250" y="104" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Medium</text><text x="430" y="104" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">High</text><text x="610" y="100" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Critical</text><text x="250" y="180" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Low</text><text x="430" y="180" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Medium</text><text x="610" y="176" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">High</text><text x="250" y="256" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Low</text><text x="430" y="256" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Low</text><text x="610" y="256" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">Medium</text><g><rect x="556" y="112" width="48" height="22" rx="11" fill="var(--cds-chart-reference-tint)" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><text x="580" y="127" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T1</text></g><g><rect x="616" y="112" width="48" height="22" rx="11" fill="var(--cds-chart-reference-tint)" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><text x="640" y="127" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T4</text></g><g><rect x="530" y="188" width="48" height="22" rx="11" fill="var(--cds-chart-reference-tint)" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><text x="554" y="203" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T2</text></g><g><rect x="586" y="188" width="48" height="22" rx="11" fill="var(--cds-chart-reference-tint)" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><text x="610" y="203" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T3</text></g><g><rect x="642" y="188" width="48" height="22" rx="11" fill="var(--cds-chart-reference-tint)" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><text x="666" y="203" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">T7</text></g><text x="148" y="114" text-anchor="end" fill="var(--cds-text-primary)">High</text><text x="148" y="190" text-anchor="end" fill="var(--cds-text-primary)">Medium</text><text x="148" y="266" text-anchor="end" fill="var(--cds-text-primary)">Low</text><text x="250" y="320" text-anchor="middle" fill="var(--cds-text-primary)">Low</text><text x="430" y="320" text-anchor="middle" fill="var(--cds-text-primary)">Medium</text><text x="610" y="320" text-anchor="middle" fill="var(--cds-text-primary)">High</text><text x="430" y="344" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">IMPACT: what does the attacker get?</text><text x="40" y="186" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)" transform="rotate(-90 40 186)">LIKELIHOOD: how easy is it?</text></svg><figcaption>Risk matrix · 3 × 3, with the top worked-example threats</figcaption></figure>
+  <h3>Questions to rate quickly</h3>
+  <ul>
+    <li><strong>Likelihood:</strong> “How hard is this to pull off? Does it need insider access, or just a leaked log file?”</li>
+    <li><strong>Impact:</strong> “If it happens, what does the attacker get? One secret, or admin on every platform?”</li>
+  </ul>
+  <h3>The four responses to a threat</h3>
+  <div class="grid2">
+    <div class="card"><h5>1 · Mitigate</h5><p>Add a control. The most common response.</p></div>
+    <div class="card"><h5>2 · Eliminate</h5><p>Remove the feature that causes it. “Does this platform have an API for rotation? Then we don't need browser automation at all.” Always ask this for the rotator.</p></div>
+    <div class="card"><h5>3 · Transfer</h5><p>Make someone else responsible (vendor, insurance). Rare for engineers.</p></div>
+    <div class="card"><h5>4 · Accept</h5><p>Document it, with who accepted it and why. Accepted risks need a named owner, usually the product or engineering lead, not a junior.</p></div>
+  </div>
+</section>
+
+<section id="after">
+  <div class="sec-num">08</div>
+  <h2>After the session: what AppSec expects</h2>
+  <p class="point">When AppSec says “do threat modeling,” the standard deliverable is a written threat model document, not a video. A recording is optional as an internal reference; it is not evidence AppSec can review.</p>
+  <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 244" role="img" aria-label="The written report, not a recording, is what AppSec reviews" font-size="13"><defs><marker id="lc-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cds-chart-axis)"></path></marker></defs><text x="24" y="30" font-size="15" font-weight="600" fill="var(--cds-text-primary)">The written report, not a recording, is what AppSec reviews</text><text x="24" y="50" font-size="11.5" fill="var(--cds-text-secondary)">A threat model's life, from prep to fixes</text><g fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"><path d="M152 122H170" marker-end="url(#lc-arrow)"></path><path d="M298 122H316" marker-end="url(#lc-arrow)"></path><path d="M444 122H462" marker-end="url(#lc-arrow)"></path><path d="M590 122H608" marker-end="url(#lc-arrow)"></path><path d="M672 172V212H88V172" marker-end="url(#lc-arrow)"></path></g><g><rect x="24" y="72" width="128" height="100" rx="8" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="40" y="94" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">BEFORE</text><text x="40" y="116" font-weight="600" fill="var(--cds-text-primary)">Prepare</text><text x="40" y="138" font-size="11.5" fill="var(--cds-text-secondary)">Draft DFD,</text><text x="40" y="154" font-size="11.5" fill="var(--cds-text-secondary)">list assets</text></g><g><rect x="170" y="72" width="128" height="100" rx="8" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="186" y="94" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">DURING</text><text x="186" y="116" font-weight="600" fill="var(--cds-text-primary)">Run session</text><text x="186" y="138" font-size="11.5" fill="var(--cds-text-secondary)">DFD, STRIDE,</text><text x="186" y="154" font-size="11.5" fill="var(--cds-text-secondary)">rate risks</text></g><g><rect x="316" y="72" width="128" height="100" rx="8" fill="var(--cds-chart-categorical-1)" fill-opacity="0.12" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></rect><text x="332" y="94" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">DELIVERABLE</text><text x="332" y="116" font-weight="600" fill="var(--cds-text-primary)">Write report</text><text x="332" y="138" font-size="11.5" fill="var(--cds-text-primary)">Register, owners</text><text x="332" y="154" font-size="11.5" fill="var(--cds-text-primary)">and sign-offs</text></g><g><rect x="462" y="72" width="128" height="100" rx="8" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="478" y="94" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">AFTER</text><text x="478" y="116" font-weight="600" fill="var(--cds-text-primary)">AppSec review</text><text x="478" y="138" font-size="11.5" fill="var(--cds-text-secondary)">Send the doc,</text><text x="478" y="154" font-size="11.5" fill="var(--cds-text-secondary)">answer comments</text></g><g><rect x="608" y="72" width="128" height="100" rx="8" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="624" y="94" font-size="11.5" font-weight="600" fill="var(--cds-text-secondary)">AFTER</text><text x="624" y="116" font-weight="600" fill="var(--cds-text-primary)">Track fixes</text><text x="624" y="138" font-size="11.5" fill="var(--cds-text-secondary)">Tickets, then</text><text x="624" y="154" font-size="11.5" fill="var(--cds-text-secondary)">verify each fix</text></g><text x="380" y="204" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">design changes: revisit the model</text></svg><figcaption>Threat model lifecycle · 5 stages</figcaption></figure>
+
+  <h3>Industry practice vs your company's call</h3>
+  <div class="grid2">
+    <div class="card"><h5>Known industry practice</h5><p>A threat model = a diagram + a list of threats + mitigations + risk decisions, kept with the project and updated when the design changes.</p></div>
+    <div class="card"><h5>Ask your AppSec team</h5><p>Their exact format isn't known here. Many teams use a template, a tool (Microsoft Threat Modeling Tool, OWASP Threat Dragon, IriusRisk) or a ticket workflow. Ask: “Do you have a template or tool you want this in, and what sign-off do you need?”</p></div>
+  </div>
+
+  <h3>Within 2 days after the session</h3>
+  <ul class="tasks">
+    <li>Clean up the DFD (draw.io, Threat Dragon, or Miro) and export it as an image</li>
+    <li>Turn the raw list into the threat register below; merge duplicates</li>
+    <li>Create a ticket for every Mitigate item, linked from the register</li>
+    <li>Get named owners to sign off any Accepted risks</li>
+    <li>Send the report to AppSec and attach it to the repo or wiki</li>
+    <li>Set a review trigger: re-run when the flow, platforms, or hosting changes</li>
+  </ul>
+
+  <h3>Report template</h3>
+  <div class="grid2">
+    <div class="card"><h5>1 · Overview</h5><ul><li>System name, owner, version/date, participants and roles</li><li>Scope: what's in, what's out</li><li>One paragraph on what the system does</li></ul></div>
+    <div class="card"><h5>2 · Architecture</h5><ul><li>DFD with numbered elements and trust boundaries</li><li>Assets and where each one lives</li><li>Assumptions, e.g. “Runs headless as a Cloud Run job; dedicated Okta service account; its password stored in 1Password”</li></ul></div>
+  </div>
+  <h4>3 · Threat register</h4>
+  <div class="table-wrap"><table>
+    <thead><tr><th>ID</th><th>Element</th><th>STRIDE</th><th>Threat</th><th>Likelihood</th><th>Impact</th><th>Risk</th><th>Response</th><th>Mitigation</th><th>Owner</th><th>Ticket</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">T1</td><td>DS2 (logs, traces)</td><td><span class="L I">I</span></td><td>New secret captured in a Playwright trace on failure</td><td>High</td><td>High</td><td><span class="pill crit">Critical</span></td><td>Mitigate</td><td>Disable traces and screenshots on secret pages; restrict storage</td><td></td><td></td><td>Open</td></tr>
+      <tr><td class="mono">T4</td><td>DS1 (1Password)</td><td><span class="L S">S</span></td><td>A 1Password viewer logs into Okta as the bot</td><td>High</td><td>High</td><td><span class="pill crit">Critical</span></td><td>Mitigate</td><td>Limit viewers; Okta MFA or network zone; login alerts</td><td></td><td></td><td>Open</td></tr>
+      <tr><td class="mono">T3</td><td>F4–F5</td><td><span class="L D">D</span></td><td>Old secret revoked before the new one is saved; integration breaks</td><td>Medium</td><td>High</td><td><span class="pill high">High</span></td><td>Mitigate</td><td>Create → update → verify → then revoke old</td><td></td><td></td><td>Open</td></tr>
+    </tbody>
+  </table></div>
+  <div class="grid2">
+    <div class="card"><h5>4 · Accepted risks</h5><p>Each with reason, owner, and review date.</p></div>
+    <div class="card"><h5>5 · Open questions</h5><p>Things nobody could answer in the room, with owners.</p></div>
+    <div class="card"><h5>6 · Sign-off</h5><p>Team lead, and AppSec reviewer if required.</p></div>
+  </div>
+  <p style="font-size:14px;color:var(--ink-3)">The rows above seed the discussion; your group should generate its own.</p>
+</section>
+
+<section id="refs">
+  <div class="sec-num">09</div>
+  <h2>References</h2>
+  <p>Links are from memory and were not re-checked; verify before sharing with the group.</p>
+  <ul>
+    <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html">OWASP Threat Modeling Cheat Sheet</a> — practical how-to built on the four questions</li>
+    <li><a href="https://www.threatmodelingmanifesto.org/">Threat Modeling Manifesto</a> — principles agreed by practitioners</li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats">Microsoft Threat Modeling Tool: threats (STRIDE)</a> — STRIDE definitions</li>
+    <li><a href="https://owasp.org/www-project-threat-dragon/">OWASP Threat Dragon</a> — free tool for DFDs and threat registers</li>
+    <li><a href="https://shostack.org/resources/threat-modeling">Shostack + Associates: threat modeling resources</a> — four-question framework, Elevation of Privilege card game</li>
+    <li>Adam Shostack, <em>Threat Modeling: Designing for Security</em> (Wiley, 2014) — the standard book</li>
+  </ul>
+  <footer>Threat Modeling Session Kit (STRIDE) · secret rotator · self-contained page, works offline and prints cleanly.</footer>
+</section>
+</main>
+</div>
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('themeBtn');
+  try { var saved = localStorage.getItem('tm-theme'); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+  btn.addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('tm-theme', next); } catch (e) {}
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var map = {}; links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { links.forEach(function (l) { l.classList.remove('active'); }); var a = map[e.target.id]; if (a) a.classList.add('active'); } });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    document.querySelectorAll('main section').forEach(function (s) { io.observe(s); });
+  }
+})();
+</script>
+</body>
+</html>
